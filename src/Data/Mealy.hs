@@ -349,9 +349,9 @@ data RegressionState (n :: Nat) a
 -- \end{align}
 -- \]
 --
--- >>> let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
--- >>> let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
--- >>> fold (beta 0.99) zs
+-- > let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
+-- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
+-- > fold (beta 0.99) zs
 -- [0.4982692361226971, 1.038192474255091]
 beta :: (Field a, LA.Field a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a)
 beta r = M extract step inject
@@ -389,9 +389,9 @@ arrayify (M sExtract sStep sInject) = M extract step inject
 
 -- | multiple regression
 --
--- >>> let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
--- >>> let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
--- >>> fold (reg 0.99) zs
+-- > let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
+-- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
+-- > fold (reg 0.99) zs
 -- ([0.4982692361226971, 1.038192474255091],2.087160803386695e-3)
 reg :: (LA.Field a, ExpField a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a, a)
 reg r = (,) <$> beta r <*> alpha r
