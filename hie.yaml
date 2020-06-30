@@ -1,0 +1,6 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "online:lib"
+    - path: "./test"
+      component: "online:test"

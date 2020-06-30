@@ -1,0 +1,20 @@
+resolver: nightly-2020-06-25
+
+packages:
+  - .
+
+extra-deps:
+  - git: https://github.com/tonyday567/numhask-space
+    commit: 6525f5096525196fe367dabdfe596a7bd0c0aa6c
+  - git: https://github.com/tonyday567/numhask
+    commit: 37ee8dced120f60a511baa6bb6c7ac382b1e8827
+    subdir: numhask-prelude
+  - git: https://github.com/tonyday567/numhask
+    commit: 37ee8dced120f60a511baa6bb6c7ac382b1e8827
+    subdir: numhask
+  - git: https://github.com/tonyday567/numhask-array
+    commit: 7f3d74e08c256e7cc846d348784b27e0467b00ec
+  - vinyl-0.12.2
+  # - backprop-0.2.6.3
+  - git: https://github.com/tonyday567/backprop
+    commit: 4bdae9d8a548a109129a25370ad7246f36be1923
