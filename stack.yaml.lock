@@ -5,60 +5,33 @@
 
 packages:
 - completed:
-    name: numhask-space
-    version: 0.5.0
-    git: https://github.com/tonyday567/numhask-space
+    hackage: backprop-0.2.6.4@sha256:9c08b0bace225b9a1ac08ce8201bad5ae140bcb501f70704a57db7ee99334618,2805
     pantry-tree:
-      size: 1074
-      sha256: a4c39e1a6edb00b40feb16077610cd306e1b48f58a277cc333b98fbf1a127f53
-    commit: 6525f5096525196fe367dabdfe596a7bd0c0aa6c
+      size: 2123
+      sha256: 43bfca6c02c69f5fc48caad795f573cfe6a1134610bef0234954736e096047fe
   original:
-    git: https://github.com/tonyday567/numhask-space
-    commit: 6525f5096525196fe367dabdfe596a7bd0c0aa6c
+    hackage: backprop-0.2.6.4
 - completed:
-    subdir: numhask-prelude
-    name: numhask-prelude
-    version: 0.6.0
-    git: https://github.com/tonyday567/numhask
+    hackage: numhask-0.6.0@sha256:f272b77dde4b598dd3af2fd12a2bf7abb3c296295ebc3fafefa628ee6726be39,1621
     pantry-tree:
-      size: 338
-      sha256: c4a8b69caf234c1a0b3374d1b740b9dd60317d01e5ee7b34cdbaad32639a905c
-    commit: 37ee8dced120f60a511baa6bb6c7ac382b1e8827
+      size: 1656
+      sha256: 9f6c30b5217b3e8b32cec46ae8b2b2831a84949b4be3c714fe571077cf4a6542
   original:
-    subdir: numhask-prelude
-    git: https://github.com/tonyday567/numhask
-    commit: 37ee8dced120f60a511baa6bb6c7ac382b1e8827
+    hackage: numhask-0.6.0
 - completed:
-    subdir: numhask
-    name: numhask
-    version: 0.6.0
-    git: https://github.com/tonyday567/numhask
+    hackage: numhask-array-0.7.0@sha256:75e3e08e37e93a5eb9d5d219a7c4eeae933f4f76e8b254ff6e41440dae5f27fb,1614
     pantry-tree:
-      size: 1668
-      sha256: b8cefa8ebdadb9f9d15dcc5151b1e5d85d5b81318a3b595ed805e6a7e7dc1c61
-    commit: 37ee8dced120f60a511baa6bb6c7ac382b1e8827
+      size: 643
+      sha256: f66ae2c5e1301d13f8b7e7f11d38d6e6116dce29a72a035b78d8970a384016b3
   original:
-    subdir: numhask
-    git: https://github.com/tonyday567/numhask
-    commit: 37ee8dced120f60a511baa6bb6c7ac382b1e8827
+    hackage: numhask-array-0.7.0
 - completed:
-    name: numhask-array
-    version: 0.7.0
-    git: https://github.com/tonyday567/numhask-array
-    pantry-tree:
-      size: 991
-      sha256: df386b88f19f1387badb4ba4fc36ead2ddfb907597b8f4c322c30b73039e8d85
-    commit: 7f3d74e08c256e7cc846d348784b27e0467b00ec
-  original:
-    git: https://github.com/tonyday567/numhask-array
-    commit: 7f3d74e08c256e7cc846d348784b27e0467b00ec
-- completed:
-    hackage: vinyl-0.12.2@sha256:cefc269fd137841861c13f28a3f20f5973ef24e9f1e6245b77b688f1cbd979de,3717
+    hackage: vinyl-0.12.3@sha256:bc6bf64231a62656c2f01d26fc27876ea8664b670b019f6b7d94f357f20600d2,3871
     pantry-tree:
       size: 1857
-      sha256: 746367fcc06b7b1ffe5f55cc388df2daa3f5eb0f87b06f4e79582e3d16ef33a9
+      sha256: 5dccd8ac766eaa1936774ae33ced6ff95cce719217d1550661a492474e6ea34a
   original:
-    hackage: vinyl-0.12.2
+    hackage: vinyl-0.12.3
 snapshots:
 - completed:
     size: 503181

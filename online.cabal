@@ -21,8 +21,8 @@ library
   build-depends:
     adjunctions >= 4.4,
     base >=4.7 && <5,
-    backprop,
-    containers,
+    backprop >= 0.2.6.4 && < 0.3,
+    containers >= 0.6,
     foldl,
     lens,
     folds,
@@ -31,7 +31,7 @@ library
     mwc-probability,
     mwc-random,
     numhask-array >= 0.7,
-    numhask-prelude >= 0.6,
+    numhask >= 0.6,
     primitive >= 0.7,
     profunctors >= 5.5,
     tdigest,
@@ -64,7 +64,7 @@ test-suite test
   build-depends:
     base >=4.7 && <5,
     doctest,
-    numhask-prelude >= 0.6,
+    numhask >= 0.6 && < 0.7,
     online
   default-language: Haskell2010
   default-extensions:
