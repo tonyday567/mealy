@@ -26,12 +26,12 @@ packages:
   original:
     hackage: numhask-array-0.7.0
 - completed:
-    hackage: vinyl-0.12.3@sha256:bc6bf64231a62656c2f01d26fc27876ea8664b670b019f6b7d94f357f20600d2,3871
+    hackage: vinyl-0.13.0@sha256:0f247cd3f8682b30881a07de18e6fec52d540646fbcb328420049cc8d63cd407,3724
     pantry-tree:
       size: 1857
-      sha256: 5dccd8ac766eaa1936774ae33ced6ff95cce719217d1550661a492474e6ea34a
+      sha256: 860fb95820b595161cdbdec5f376100ebae2d14e5ef0dbe311546202f7525d01
   original:
-    hackage: vinyl-0.12.3
+    hackage: vinyl-0.13.0
 snapshots:
 - completed:
     size: 503181

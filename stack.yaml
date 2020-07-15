@@ -7,4 +7,4 @@ extra-deps:
   - backprop-0.2.6.4
   - numhask-0.6.0
   - numhask-array-0.7.0
-  - vinyl-0.12.3
+  - vinyl-0.13.0
