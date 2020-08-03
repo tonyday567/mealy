@@ -529,6 +529,9 @@ depModel1 r m1 =
 fromFoldl :: L.Fold a b -> Mealy a b
 fromFoldl (L.Fold step begin e) = M e step (step begin)
 
+toFoldl :: Mealy a b -> a -> L.Fold a b
+toFoldl (Mealy e s i) a = L.Foldl s (i a) e
+
 foldB :: (Reifies s W) => (BVar s Double -> BVar s Double) -> BVar s Double -> BVar s [Double] -> BVar s Double
 foldB f r xs = divide (PB.foldl' (step' f r) (B.T2 0 0) xs)
   where
