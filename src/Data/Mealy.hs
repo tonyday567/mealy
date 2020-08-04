@@ -60,7 +60,6 @@ module Data.Mealy
     depModel1,
 
     -- * conversion
-    fromFoldl,
     foldB,
     maB,
 
@@ -73,7 +72,6 @@ module Data.Mealy
   )
 where
 
-import qualified Control.Foldl as L
 import Control.Lens hiding ((:>), Empty, Unwrapped, Wrapped, index, (|>))
 import Data.Fold hiding (M)
 import Data.Functor.Rep
@@ -106,17 +104,23 @@ import qualified Prelude as P
 -- >>> xs2 <- rvs g 10000
 -- >>> xsp <- rvsp g 10000 0.8
 
--- | A 'Mealy' is a triple of functions
---
--- * (c -> b) __extract__ Convert state to the output type.
--- * (c -> a -> c) __step__ Update state given prior state and (new) input.
--- * (a -> c) __inject__ Convert an input into the state type.
---
--- The type is a newtype wrapper around 'L1' in 'Data.Fold'.
---
--- __inject__ is necessary to kick off state on a 'fold' or 'scan', rather than a state existing prior to the fold or scan (this is a Moore machine or 'M1' in 'Data.Fold').
---
--- > scan (M e s i) (x : xs) = e <$> scanl' s (i x) xs
+{- | A 'Mealy' is a triple of functions
+
+ * (a -> b) __inject__ Convert an input into the state type.
+ * (b -> a -> b) __step__ Update state given prior state and (new) input.
+ * (c -> b) __extract__ Convert state to the output type.
+
+ By adopting this order, a Mealy sum looks like:
+
+> M id (+) id
+
+where the first id is the initial injection to a contravariant position, and the second id is the covriant extraction.
+
+ __inject__ kicks off state on the initial element of the Foldable, but is otherwise be independent of __step__.
+
+> scan (M e s i) (x : xs) = e <$> scanl' s (i x) xs
+
+-}
 newtype Mealy a b = Mealy {l1 :: L1 a b}
   deriving (Profunctor, Category) via L1
   deriving (Functor, Applicative) via L1 a
@@ -124,8 +128,8 @@ newtype Mealy a b = Mealy {l1 :: L1 a b}
 -- | Pattern for a 'Mealy'.
 --
 -- @M extract step inject@
-pattern M :: (c -> b) -> (c -> a -> c) -> (a -> c) -> Mealy a b
-pattern M e s i = Mealy (L1 e s i)
+pattern M :: (a -> c) -> (c -> a -> c) -> (c -> b) -> Mealy a b
+pattern M i s e = Mealy (L1 e s i)
 
 {-# COMPLETE M #-}
 
@@ -134,14 +138,14 @@ pattern M e s i = Mealy (L1 e s i)
 -- > cosieve == fold
 fold :: Mealy a b -> [a] -> b
 fold _ [] = panic "on the streets of Birmingham."
-fold (M e s i) (x : xs) = e $ foldl' s (i x) xs
+fold (M i s e) (x : xs) = e $ foldl' s (i x) xs
 
 -- | Run a list through a 'Mealy' and return a list of values for every step
 --
 -- > length (scan _ xs) == length xs
 scan :: Mealy a b -> [a] -> [b]
 scan _ [] = []
-scan (M e s i) (x : xs) = fromList (e <$> scanl' s (i x) xs)
+scan (M i s e) (x : xs) = fromList (e <$> scanl' s (i x) xs)
 
 -- | Most common statistics are averages, which are some sort of aggregation of values (sum) and some sort of sample size (count).
 newtype Averager a b
@@ -183,7 +187,7 @@ av_ (A s c) def = bool def (s / c) (c == zero)
 --
 -- > online id id == av
 online :: (Divisive b, Additive b) => (a -> b) -> (b -> b) -> Mealy a b
-online f g = M av step intract
+online f g = M intract step av
   where
     intract a = A (f a) one
     step (A s c) a =
@@ -354,7 +358,7 @@ data RegressionState (n :: Nat) a
 -- > fold (beta 0.99) zs
 -- [0.4982692361226971, 1.038192474255091]
 beta :: (Field a, LA.Field a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a)
-beta r = M extract step inject
+beta r = M inject step extract
   where
     extract (A (RegressionState xx x xy y) c) =
       liftHM2
@@ -403,11 +407,11 @@ asum = M id (+) id
 
 -- | constant Mealy
 aconst :: b -> Mealy a b
-aconst a = M (const a) (\_ _ -> ()) (const ())
+aconst b = M (const ()) (\_ _ -> ()) (const b)
 
 -- | delay input values by 1
 delay1 :: a -> Mealy a a
-delay1 x0 = M fst (\(_, x) a -> (x, a)) (x0,)
+delay1 x0 = M (x0,) (\(_, x) a -> (x, a)) fst
 
 -- | delays values by n steps
 --
@@ -427,7 +431,7 @@ delay ::
   -- | initial statistical values, delay equals length
   [a] ->
   Mealy a a
-delay x0 = M extract step inject
+delay x0 = M inject step extract
   where
     inject a = Seq.fromList x0 Seq.|> a
     extract :: Seq a -> a
@@ -479,10 +483,11 @@ delay x0 = M extract step inject
 --
 -- ![stdma](other/ex-stdma.svg)
 depState :: (a -> b -> a) -> Mealy a b -> Mealy a a
-depState f (M sExtract sStep sInject) = M fst step inject
+depState f (M sInject sStep sExtract) = M inject step extract
   where
     inject a = (a, sInject a)
-    step (_, m) a = let a' = f a (sExtract m) in (a', sStep m a')
+    step (_, x) a = let a' = f a (sExtract x) in (a', sStep x a')
+    extract (a, _) = a
 
 -- | a linear model of state dependencies for the first two moments
 --
@@ -526,12 +531,6 @@ depModel1 r m1 =
         + (m1 ^. #betaMa2X) * m
         + (m1 ^. #betaStd2X) * (s - 1)
 
-fromFoldl :: L.Fold a b -> Mealy a b
-fromFoldl (L.Fold step begin e) = M e step (step begin)
-
-toFoldl :: Mealy a b -> a -> L.Fold a b
-toFoldl (Mealy e s i) a = L.Foldl s (i a) e
-
 foldB :: (Reifies s W) => (BVar s Double -> BVar s Double) -> BVar s Double -> BVar s [Double] -> BVar s Double
 foldB f r xs = divide (PB.foldl' (step' f r) (B.T2 0 0) xs)
   where
@@ -550,31 +549,31 @@ data Medianer a b
         medianEst :: a
       }
 
--- | onlineL1' takes a function and turns it into a `Control.Foldl.Fold` where the step is an incremental update of an (isomorphic) median statistic.
+-- | onlineL1' takes a function and turns it into a `Mealy` where the step is an incremental update of an (isomorphic) median statistic.
 onlineL1' ::
-  (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> L.Fold a (b, b)
-onlineL1' i d f g = L.Fold step begin extract
+  (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a (b, b)
+onlineL1' i d f g = M inject step extract
   where
-    begin = Medianer zero zero zero
+    inject a = let s = abs (f a) in Medianer s one (i * s)
     step (Medianer s c m) a =
       Medianer
         (g $ s + abs (f a))
         (g $ c + one)
-        ((one - d) * (m + s' * i * s / c') + d * f a)
+        ((one - d) * (m + sign' a m * i * s / c') + d * f a)
       where
         c' =
           if c == zero
             then one
             else c
-        s'
-          | f a > m = one
-          | f a < m = negate one
-          | otherwise = zero
     extract (Medianer s c m) = (s / c, m)
+    sign' a m
+      | f a > m = one
+      | f a < m = negate one
+      | otherwise = zero
 {-# INLINEABLE onlineL1' #-}
 
 -- | onlineL1 takes a function and turns it into a `Control.Foldl.Fold` where the step is an incremental update of an (isomorphic) median statistic.
-onlineL1 :: (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> L.Fold a b
+onlineL1 :: (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a b
 onlineL1 i d f g = snd <$> onlineL1' i d f g
 {-# INLINEABLE onlineL1 #-}
 
@@ -589,11 +588,11 @@ onlineL1 i d f g = snd <$> onlineL1' i d f g
 -- | moving median
 -- > L.fold (maL1 inc d r) [1..n]
 -- 93.92822312742108
-maL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> L.Fold a a
+maL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> Mealy a a
 maL1 i d r = onlineL1 i d id (* r)
 {-# INLINEABLE maL1 #-}
 
 -- | moving absolute deviation
-absmaL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> L.Fold a a
+absmaL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> Mealy a a
 absmaL1 i d r = fst <$> onlineL1' i d id (* r)
 {-# INLINEABLE absmaL1 #-}

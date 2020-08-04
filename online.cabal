@@ -23,7 +23,6 @@ library
     backprop >= 0.2.6.4 && < 0.3,
     base >=4.7 && <5,
     containers >= 0.6,
-    foldl,
     folds,
     generic-lens >= 2.0,
     hmatrix >= 0.20,

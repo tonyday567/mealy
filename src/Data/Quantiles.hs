@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DataKinds #-}
 
 module Data.Quantiles
@@ -12,11 +13,7 @@ module Data.Quantiles
   )
 where
 
-import qualified Control.Foldl as L
-import Control.Monad.ST (runST)
-import Data.Foldable
-import Data.List.NonEmpty (NonEmpty)
-import Data.Maybe
+import Data.Mealy
 import Data.Ord
 import Data.TDigest
 import Data.TDigest.Internal
@@ -24,31 +21,7 @@ import Data.TDigest.Postprocess (HistBin, histogram)
 import Data.TDigest.Tree.Internal (TDigest (..), absMaxSize, emptyTDigest, insertCentroid, relMaxSize, size, toMVector)
 import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed as VU
-import Prelude
-
--- | a raw non-online tdigest fold
-tDigest :: L.Fold Double (TDigest 25)
-tDigest = L.Fold step begin done
-  where
-    step x a = insert a x
-    begin = tdigest ([] :: [Double]) :: TDigest 25
-    done = id
-
--- | non-online version
-tDigestQuantiles :: [Double] -> L.Fold Double [Double]
-tDigestQuantiles qs = L.Fold step begin done
-  where
-    step x a = insert a x
-    begin = tdigest ([] :: [Double]) :: TDigest 25
-    done x = fromMaybe (0 / 0) . (`quantile` compress x) <$> qs
-
--- | non-online version
-tDigestHist :: L.Fold Double (Maybe (NonEmpty HistBin))
-tDigestHist = L.Fold step begin done
-  where
-    step x a = insert a x
-    begin = tdigest ([] :: [Double]) :: TDigest 25
-    done = histogram . compress
+import NumHask.Prelude hiding (fold)
 
 data OnlineTDigest
   = OnlineTDigest
@@ -58,25 +31,48 @@ data OnlineTDigest
       }
   deriving (Show)
 
+-- | a raw non-online tdigest fold
+tDigest :: Mealy Double (TDigest 25)
+tDigest = M inject step id
+  where
+    step x a = insert a x
+    inject a = insert a (tdigest ([] :: [Double]) :: TDigest 25)
+
+-- | non-online version
+tDigestQuantiles :: [Double] -> Mealy Double [Double]
+tDigestQuantiles qs = M inject step extract
+  where
+    step x a = insert a x
+    inject a = insert a (tdigest ([] :: [Double]) :: TDigest 25)
+    extract x = fromMaybe (0 / 0) . (`quantile` compress x) <$> qs
+
+-- | non-online version
+tDigestHist :: Mealy Double (Maybe (NonEmpty HistBin))
+tDigestHist = M inject step extract
+  where
+    step x a = insert a x
+    inject a = insert a (tdigest ([] :: [Double]) :: TDigest 25)
+    extract = histogram . compress
+
 emptyOnlineTDigest :: Double -> OnlineTDigest
 emptyOnlineTDigest = OnlineTDigest (emptyTDigest :: TDigest n) 0
 
 -- | decaying quantiles based on the tdigest library
-onlineQuantiles :: Double -> [Double] -> L.Fold Double [Double]
-onlineQuantiles r qs = L.Fold step begin done
+onlineQuantiles :: Double -> [Double] -> Mealy Double [Double]
+onlineQuantiles r qs = M inject step extract
   where
     step x a = onlineInsert a x
-    begin = emptyOnlineTDigest r
-    done x = fromMaybe (0 / 0) . (`quantile` t) <$> qs
+    inject a = onlineInsert a (emptyOnlineTDigest r)
+    extract x = fromMaybe (0 / 0) . (`quantile` t) <$> qs
       where
         (OnlineTDigest t _ _) = onlineForceCompress x
 
-median :: Double -> L.Fold Double Double
-median r = L.Fold step begin done
+median :: Double -> Mealy Double Double
+median r = M inject step extract
   where
     step x a = onlineInsert a x
-    begin = emptyOnlineTDigest r
-    done x = fromMaybe (0 / 0) (quantile 0.5 t)
+    inject a = onlineInsert a (emptyOnlineTDigest r)
+    extract x = fromMaybe (0 / 0) (quantile 0.5 t)
       where
         (OnlineTDigest t _ _) = onlineForceCompress x
 
@@ -116,17 +112,17 @@ onlineForceCompress (OnlineTDigest t n r) = OnlineTDigest t' 0 r
         VHeap.sortBy (comparing snd) v
         VU.unsafeFreeze v
 
-onlineDigitize :: Double -> [Double] -> L.Fold Double Int
-onlineDigitize r qs = L.Fold step begin done
+onlineDigitize :: Double -> [Double] -> Mealy Double Int
+onlineDigitize r qs = M inject step extract
   where
     step (x, _) a = (onlineInsert a x, a)
-    begin = (emptyOnlineTDigest r, 0 / 0)
-    done (x, l) = bucket' qs' l
+    inject a = (onlineInsert a (emptyOnlineTDigest r), a)
+    extract (x, l) = bucket' qs' l
       where
         qs' = fromMaybe (0 / 0) . (`quantile` t) <$> qs
         (OnlineTDigest t _ _) = onlineForceCompress x
         bucket' xs l' =
-          L.fold L.sum $
+          fold (M id (+) id) $
             ( \x' ->
                 if x' > l'
                   then 0
@@ -135,11 +131,11 @@ onlineDigitize r qs = L.Fold step begin done
               <$> xs
 
 -- | decaying histogram based on the tdigest library
-onlineDigestHist :: Double -> L.Fold Double (Maybe (NonEmpty HistBin))
-onlineDigestHist r = L.Fold step begin done
+onlineDigestHist :: Double -> Mealy Double (Maybe (NonEmpty HistBin))
+onlineDigestHist r = M inject step extract
   where
     step x a = onlineInsert a x
-    begin = emptyOnlineTDigest r
-    done x = histogram . compress $ t
+    inject a = onlineInsert a (emptyOnlineTDigest r)
+    extract x = histogram . compress $ t
       where
         (OnlineTDigest t _ _) = onlineForceCompress x
