@@ -1,6 +1,6 @@
 cradle:
   stack:
     - path: "./src"
-      component: "online:lib"
+      component: "mealy:lib"
     - path: "./test"
-      component: "online:test"
+      component: "mealy:test"

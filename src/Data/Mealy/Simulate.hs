@@ -6,7 +6,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 
-module Data.Simulate
+module Data.Mealy.Simulate
   ( rvs,
     rvsp,
     create,

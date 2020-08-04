@@ -1,23 +1,17 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DataKinds #-}
 
-module Data.Quantiles
-  ( tDigest,
-    tDigestQuantiles,
-    tDigestHist,
-    OnlineTDigest (..),
-    onlineQuantiles,
-    Data.Quantiles.median,
-    onlineDigitize,
-    onlineDigestHist,
+module Data.Mealy.Quantiles
+  ( median,
+    quantiles,
+    digitize,
   )
 where
 
 import Data.Mealy
 import Data.Ord
-import Data.TDigest
+import Data.TDigest hiding (median)
 import Data.TDigest.Internal
-import Data.TDigest.Postprocess (HistBin, histogram)
 import Data.TDigest.Tree.Internal (TDigest (..), absMaxSize, emptyTDigest, insertCentroid, relMaxSize, size, toMVector)
 import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed as VU
@@ -31,35 +25,12 @@ data OnlineTDigest
       }
   deriving (Show)
 
--- | a raw non-online tdigest fold
-tDigest :: Mealy Double (TDigest 25)
-tDigest = M inject step id
-  where
-    step x a = insert a x
-    inject a = insert a (tdigest ([] :: [Double]) :: TDigest 25)
-
--- | non-online version
-tDigestQuantiles :: [Double] -> Mealy Double [Double]
-tDigestQuantiles qs = M inject step extract
-  where
-    step x a = insert a x
-    inject a = insert a (tdigest ([] :: [Double]) :: TDigest 25)
-    extract x = fromMaybe (0 / 0) . (`quantile` compress x) <$> qs
-
--- | non-online version
-tDigestHist :: Mealy Double (Maybe (NonEmpty HistBin))
-tDigestHist = M inject step extract
-  where
-    step x a = insert a x
-    inject a = insert a (tdigest ([] :: [Double]) :: TDigest 25)
-    extract = histogram . compress
-
 emptyOnlineTDigest :: Double -> OnlineTDigest
 emptyOnlineTDigest = OnlineTDigest (emptyTDigest :: TDigest n) 0
 
 -- | decaying quantiles based on the tdigest library
-onlineQuantiles :: Double -> [Double] -> Mealy Double [Double]
-onlineQuantiles r qs = M inject step extract
+quantiles :: Double -> [Double] -> Mealy Double [Double]
+quantiles r qs = M inject step extract
   where
     step x a = onlineInsert a x
     inject a = onlineInsert a (emptyOnlineTDigest r)
@@ -112,8 +83,8 @@ onlineForceCompress (OnlineTDigest t n r) = OnlineTDigest t' 0 r
         VHeap.sortBy (comparing snd) v
         VU.unsafeFreeze v
 
-onlineDigitize :: Double -> [Double] -> Mealy Double Int
-onlineDigitize r qs = M inject step extract
+digitize :: Double -> [Double] -> Mealy Double Int
+digitize r qs = M inject step extract
   where
     step (x, _) a = (onlineInsert a x, a)
     inject a = (onlineInsert a (emptyOnlineTDigest r), a)
@@ -129,13 +100,3 @@ onlineDigitize r qs = M inject step extract
                   else 1
             )
               <$> xs
-
--- | decaying histogram based on the tdigest library
-onlineDigestHist :: Double -> Mealy Double (Maybe (NonEmpty HistBin))
-onlineDigestHist r = M inject step extract
-  where
-    step x a = onlineInsert a x
-    inject a = onlineInsert a (emptyOnlineTDigest r)
-    extract x = histogram . compress $ t
-      where
-        (OnlineTDigest t _ _) = onlineForceCompress x

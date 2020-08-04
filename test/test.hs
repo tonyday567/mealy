@@ -11,6 +11,6 @@ main :: IO ()
 main =
   doctest
   [ "src/Data/Mealy.hs",
-    "src/Data/Quantiles.hs",
-    "src/Data/Simulate.hs"
+    "src/Data/Mealy/Quantiles.hs",
+    "src/Data/Mealy/Simulate.hs"
   ]

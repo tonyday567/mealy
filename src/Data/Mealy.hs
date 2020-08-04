@@ -97,7 +97,7 @@ import qualified Prelude as P
 -- >>> :set -XDataKinds
 -- >>> import Control.Category ((>>>))
 -- >>> import Data.List
--- >>> import Data.Simulate
+-- >>> import Data.Mealy.Simulate
 -- >>> g <- create
 -- >>> xs0 <- rvs g 10000
 -- >>> xs1 <- rvs g 10000
