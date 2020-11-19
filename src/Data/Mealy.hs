@@ -78,12 +78,12 @@ import Data.Functor.Rep
 import Data.Generics.Labels ()
 import qualified Data.Sequence as Seq
 import qualified NumHask.Array.Fixed as F
-import qualified NumHask.Array.HMatrix as HM
+-- import qualified NumHask.Array.HMatrix as HM
 import NumHask.Array.Shape (HasShape)
 import NumHask.Prelude hiding (L1, State, StateT, asum, fold, get, replace, runState, runStateT, state)
 import qualified Numeric.Backprop as B
 import Numeric.Backprop (BVar, Reifies, W)
-import qualified Numeric.LinearAlgebra as LA
+-- import qualified Numeric.LinearAlgebra as LA
 import qualified Prelude.Backprop as PB
 import qualified Prelude as P
 
@@ -357,21 +357,33 @@ data RegressionState (n :: Nat) a
 -- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
 -- > fold (beta 0.99) zs
 -- [0.4982692361226971, 1.038192474255091]
-beta :: (Field a, LA.Field a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a)
-beta r = M inject step extract
+beta :: (Field a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a)
+beta _ = undefined
+
+{-
+M inject step extract
   where
     extract (A (RegressionState xx x xy y) c) =
-      liftHM2
-        (\a b -> LA.pinv a LA.<> LA.tr b)
-        ((one / c) *. (xx - F.expand (*) x x))
-        ((xy - (y *. x)) .* (one / c))
+        (\a b -> lapinv a laop latr b)
+        ((one / c) .* (xx - F.expand (*) x x))
+        ((xy - (y .* x)) *. (one / c))
     step x (xs, y) = rsOnline r x (inject (xs, y))
     inject (xs, y) =
       A (RegressionState (F.expand (*) xs xs) xs (y *. xs) y) one
+
+lapinv = undefined
+laop = undefined <>
+latr = undefined
+
+-}
 {-# INLINEABLE beta #-}
 
+
+{-
 liftHM2 :: (LA.Field a, HasShape s, HasShape s', HasShape s'') => (LA.Matrix a -> LA.Matrix a -> LA.Matrix a) -> F.Array s a -> F.Array s' a -> F.Array s'' a
 liftHM2 f a b = HM.toFixed $ HM.Array $ f (HM.unArray . HM.fromFixed $ a) (HM.unArray . HM.fromFixed $ b)
+
+-}
 
 rsOnline :: (Field a, KnownNat n) => a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a
 rsOnline r (A (RegressionState xx x xy y) c) (A (RegressionState xx' x' xy' y') c') =
@@ -380,7 +392,7 @@ rsOnline r (A (RegressionState xx x xy y) c) (A (RegressionState xx' x' xy' y') 
     d s s' = r * s + s'
 
 -- | alpha in a multiple regression
-alpha :: (LA.Field a, ExpField a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) a
+alpha :: (ExpField a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) a
 alpha r = (\xs b y -> y - sum (liftR2 (*) b xs)) <$> lmap fst (arrayify $ ma r) <*> beta r <*> lmap snd (ma r)
 {-# INLINEABLE alpha #-}
 
@@ -397,7 +409,7 @@ arrayify (M sExtract sStep sInject) = M extract step inject
 -- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
 -- > fold (reg 0.99) zs
 -- ([0.4982692361226971, 1.038192474255091],2.087160803386695e-3)
-reg :: (LA.Field a, ExpField a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a, a)
+reg :: (ExpField a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a, a)
 reg r = (,) <$> beta r <*> alpha r
 {-# INLINEABLE reg #-}
 
