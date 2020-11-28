@@ -27,6 +27,7 @@ library
     generic-lens >= 2.0,
     hmatrix >= 0.20,
     lens,
+    matrix >= 0.3.6 && < 0.3.7,
     mwc-probability,
     mwc-random,
     numhask >= 0.7 && < 0.8,
