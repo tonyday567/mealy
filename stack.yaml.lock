@@ -5,26 +5,47 @@
 
 packages:
 - completed:
+    hackage: numhask-0.7.0.0@sha256:c476b4b90020ad63d5009b5a532ac14ba07f1a0a74f92c17d72831a21b8d33d8,2438
+    pantry-tree:
+      size: 1533
+      sha256: 78b3f2bc77cdc59923c752fbad301f4aac48878f8ff96daebd098a2959c8fd55
+  original:
+    hackage: numhask-0.7.0.0
+- completed:
+    hackage: numhask-array-0.8.0@sha256:0914132b3cbad09f08646c4de37524199fa03717fb007a610c08bf71eab14dca,1963
+    pantry-tree:
+      size: 574
+      sha256: c03f3d0e47a3cacd3eb7b80fb4f3eeeaf17da8e67b8aa1232c0b21669ab2f8cc
+  original:
+    hackage: numhask-array-0.8.0
+- completed:
+    hackage: protolude-0.3.0@sha256:8361b811b420585b122a7ba715aa5923834db6e8c36309bf267df2dbf66b95ef,2693
+    pantry-tree:
+      size: 1644
+      sha256: babf32b414f25f790b7a4ce6bae5c960bc51a11a289e7c47335b222e6762560c
+  original:
+    hackage: protolude-0.3.0
+- completed:
+    hackage: random-1.2.0@sha256:4321209c8faedc034810ea8ed0dbc4a36f1a1df97b75af024219f2f533da57de,6094
+    pantry-tree:
+      size: 1259
+      sha256: 29ff0a7ec5bf123e2c40f849b7af163950854a6c08c68b4a1b4364ce7a515af0
+  original:
+    hackage: random-1.2.0
+- completed:
+    hackage: splitmix-0.1.0.3@sha256:fc3aae74c467f4b608050bef53aec17904a618731df9407e655d8f3bf8c32d5c,6049
+    pantry-tree:
+      size: 1400
+      sha256: 8290f921f41c3628a6c9871502e57fd1d25f5954967afbf4ed16717fd8d3656f
+  original:
+    hackage: splitmix-0.1.0.3
+- completed:
     hackage: backprop-0.2.6.4@sha256:9c08b0bace225b9a1ac08ce8201bad5ae140bcb501f70704a57db7ee99334618,2805
     pantry-tree:
       size: 2123
       sha256: 43bfca6c02c69f5fc48caad795f573cfe6a1134610bef0234954736e096047fe
   original:
     hackage: backprop-0.2.6.4
-- completed:
-    hackage: numhask-0.6.0.2@sha256:f887f535fad2dfe14180bdb1793ce62afb330d07aaa81f9366914cda1e7cdcd4,1623
-    pantry-tree:
-      size: 1656
-      sha256: a1b4227c1f36f4ab30f4e372b72d3092a06c7e18e9c7d7be7e832f0188a1927e
-  original:
-    hackage: numhask-0.6.0.2
-- completed:
-    hackage: numhask-array-0.7.0@sha256:75e3e08e37e93a5eb9d5d219a7c4eeae933f4f76e8b254ff6e41440dae5f27fb,1614
-    pantry-tree:
-      size: 643
-      sha256: f66ae2c5e1301d13f8b7e7f11d38d6e6116dce29a72a035b78d8970a384016b3
-  original:
-    hackage: numhask-array-0.7.0
 - completed:
     hackage: vinyl-0.13.0@sha256:0f247cd3f8682b30881a07de18e6fec52d540646fbcb328420049cc8d63cd407,3724
     pantry-tree:
@@ -34,7 +55,7 @@ packages:
     hackage: vinyl-0.13.0
 snapshots:
 - completed:
-    size: 503181
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2020/6/25.yaml
-    sha256: 96e98363790e62f4498da632069a03101cf588b3b47925e707f080cff4b6cfbb
-  original: nightly-2020-06-25
+    size: 553330
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2020/11/19.yaml
+    sha256: 7ae41d7d9026078cbc28fa535936498eaf604f93b04f9c9c61224312c7f47758
+  original: nightly-2020-11-19

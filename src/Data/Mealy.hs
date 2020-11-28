@@ -216,7 +216,7 @@ ma r = online id (* r)
 --
 -- >>> fold (absma 1) xs0
 -- 0.7894201075535578
-absma :: (Divisive a, Additive a, Signed a) => a -> Mealy a a
+absma :: (Divisive a, Signed a) => a -> Mealy a a
 absma r = online abs (* r)
 {-# INLINEABLE absma #-}
 
@@ -358,24 +358,20 @@ data RegressionState (n :: Nat) a
 -- > fold (beta 0.99) zs
 -- [0.4982692361226971, 1.038192474255091]
 beta :: (Field a, KnownNat n) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a)
-beta _ = undefined
-
-{-
-M inject step extract
+beta r = M inject step extract
   where
     extract (A (RegressionState xx x xy y) c) =
-        (\a b -> lapinv a laop latr b)
+        (\a b -> lapinv a laop transpose b)
         ((one / c) .* (xx - F.expand (*) x x))
         ((xy - (y .* x)) *. (one / c))
     step x (xs, y) = rsOnline r x (inject (xs, y))
     inject (xs, y) =
-      A (RegressionState (F.expand (*) xs xs) xs (y *. xs) y) one
+      A (RegressionState (F.expand (*) xs xs) xs (y .* xs) y) one
 
-lapinv = undefined
-laop = undefined <>
-latr = undefined
+    lapinv = undefined
+    laop = undefined
 
--}
+
 {-# INLINEABLE beta #-}
 
 
