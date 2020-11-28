@@ -1,10 +1,14 @@
-resolver: nightly-2020-06-25
+resolver: nightly-2020-11-19
 
 packages:
   - .
 
 extra-deps:
+  - numhask-0.7.0.0
+  - numhask-array-0.8.0
+  - protolude-0.3.0
+  - random-1.2.0
+  - splitmix-0.1.0.3
+
   - backprop-0.2.6.4
-  - numhask-0.6.0.2
-  - numhask-array-0.7.0
   - vinyl-0.13.0

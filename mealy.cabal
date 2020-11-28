@@ -1,6 +1,6 @@
 cabal-version: 2.4
 name:          mealy
-version:       0.0.1
+version:       0.0.2
 synopsis: See readme.md
 description: See readme.md for description.
 category: project
@@ -27,10 +27,11 @@ library
     generic-lens >= 2.0,
     hmatrix >= 0.20,
     lens,
+    matrix >= 0.3.6 && < 0.3.7,
     mwc-probability,
     mwc-random,
-    numhask >= 0.6 && < 0.7,
-    numhask-array >= 0.7 && < 0.8,
+    numhask >= 0.7 && < 0.8,
+    numhask-array >= 0.8 && < 0.9,
     primitive >= 0.7,
     profunctors >= 5.5,
     tdigest,
@@ -63,7 +64,7 @@ test-suite test
   build-depends:
     base >=4.7 && <5,
     doctest,
-    numhask >= 0.6 && < 0.7,
+    numhask >= 0.7 && < 0.8,
     mealy
   default-language: Haskell2010
   default-extensions:
