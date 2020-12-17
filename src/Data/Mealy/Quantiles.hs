@@ -1,5 +1,6 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE StrictData #-}
 
 module Data.Mealy.Quantiles
   ( median,
@@ -17,12 +18,11 @@ import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed as VU
 import NumHask.Prelude hiding (fold)
 
-data OnlineTDigest
-  = OnlineTDigest
-      { td :: TDigest 25,
-        tdN :: Int,
-        tdRate :: Double
-      }
+data OnlineTDigest = OnlineTDigest
+  { td :: TDigest 25,
+    tdN :: Int,
+    tdRate :: Double
+  }
   deriving (Show)
 
 emptyOnlineTDigest :: Double -> OnlineTDigest

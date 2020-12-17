@@ -13,14 +13,15 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 -- | Online statistics for ordered data (such as time-series data), modelled as [mealy machines](https://en.wikipedia.org/wiki/Mealy_machine)
 module Data.Mealy
@@ -72,21 +73,23 @@ module Data.Mealy
   )
 where
 
-import Control.Lens hiding ((:>), Empty, Unwrapped, Wrapped, index, (|>))
+import Control.Lens hiding (Empty, Unwrapped, Wrapped, index, (:>), (|>))
 import Data.Fold hiding (M)
 import Data.Functor.Rep
 import Data.Generics.Labels ()
+-- import qualified NumHask.Array.HMatrix as HM
+
+-- import qualified Numeric.LinearAlgebra as LA
+
+import qualified Data.Matrix as M
 import qualified Data.Sequence as Seq
 import qualified NumHask.Array.Fixed as F
--- import qualified NumHask.Array.HMatrix as HM
 import NumHask.Array.Shape (HasShape)
 import NumHask.Prelude hiding (L1, State, StateT, asum, fold, get, replace, runState, runStateT, state)
-import qualified Numeric.Backprop as B
 import Numeric.Backprop (BVar, Reifies, W)
--- import qualified Numeric.LinearAlgebra as LA
+import qualified Numeric.Backprop as B
 import qualified Prelude.Backprop as PB
 import qualified Prelude as P
-import qualified Data.Matrix as M
 
 -- $setup
 -- Generate some random variates for the examples.
@@ -105,23 +108,21 @@ import qualified Data.Matrix as M
 -- >>> xs2 <- rvs g 10000
 -- >>> xsp <- rvsp g 10000 0.8
 
-{- | A 'Mealy' is a triple of functions
-
- * (a -> b) __inject__ Convert an input into the state type.
- * (b -> a -> b) __step__ Update state given prior state and (new) input.
- * (c -> b) __extract__ Convert state to the output type.
-
- By adopting this order, a Mealy sum looks like:
-
-> M id (+) id
-
-where the first id is the initial injection to a contravariant position, and the second id is the covriant extraction.
-
- __inject__ kicks off state on the initial element of the Foldable, but is otherwise be independent of __step__.
-
-> scan (M e s i) (x : xs) = e <$> scanl' s (i x) xs
-
--}
+-- | A 'Mealy' is a triple of functions
+--
+-- * (a -> b) __inject__ Convert an input into the state type.
+-- * (b -> a -> b) __step__ Update state given prior state and (new) input.
+-- * (c -> b) __extract__ Convert state to the output type.
+--
+-- By adopting this order, a Mealy sum looks like:
+--
+-- > M id (+) id
+--
+-- where the first id is the initial injection to a contravariant position, and the second id is the covriant extraction.
+--
+-- __inject__ kicks off state on the initial element of the Foldable, but is otherwise be independent of __step__.
+--
+-- > scan (M e s i) (x : xs) = e <$> scanl' s (i x) xs
 newtype Mealy a b = Mealy {l1 :: L1 a b}
   deriving (Profunctor, Category) via L1
   deriving (Functor, Applicative) via L1 a
@@ -149,10 +150,9 @@ scan _ [] = []
 scan (M i s e) (x : xs) = fromList (e <$> scanl' s (i x) xs)
 
 -- | Most common statistics are averages, which are some sort of aggregation of values (sum) and some sort of sample size (count).
-newtype Averager a b
-  = Averager
-      { sumCount :: (a, b)
-      }
+newtype Averager a b = Averager
+  { sumCount :: (a, b)
+  }
   deriving (Eq, Show)
 
 -- | Pattern for an 'Averager'.
@@ -331,13 +331,12 @@ alpha1 m = (\x b y -> y - b * x) <$> lmap fst m <*> beta1 m <*> lmap snd m
 reg1 :: (ExpField a) => Mealy a a -> Mealy (a, a) (a, a)
 reg1 m = (,) <$> alpha1 m <*> beta1 m
 
-data RegressionState (n :: Nat) a
-  = RegressionState
-      { _xx :: F.Array '[n, n] a,
-        _x :: F.Array '[n] a,
-        _xy :: F.Array '[n] a,
-        _y :: a
-      }
+data RegressionState (n :: Nat) a = RegressionState
+  { _xx :: F.Array '[n, n] a,
+    _x :: F.Array '[n] a,
+    _xy :: F.Array '[n] a,
+    _y :: a
+  }
   deriving (Functor)
 
 -- | multiple regression
@@ -363,7 +362,7 @@ beta r = M inject step extract
   where
     -- extract :: Averager (RegressionState n a) a -> (F.Array '[n] a)
     extract (A (RegressionState xx x xy y) c) =
-        (\a b -> inverse a `F.mult` b)
+      (\a b -> inverse a `F.mult` b)
         ((one / c) .* (xx - F.expand (*) x x))
         ((xy - (y .* x)) *. (one / c))
     step x (xs, y) = rsOnline r x (inject (xs, y))
@@ -372,21 +371,21 @@ beta r = M inject step extract
       A (RegressionState (F.expand (*) xs xs) xs (y .* xs) y) one
 {-# INLINEABLE beta #-}
 
-toMatrix :: (KnownNat n, KnownNat m) => F.Array [m,n] a -> M.Matrix a
-toMatrix a = M.matrix m n (index a . (\(i,j) -> [i,j]))
+toMatrix :: (KnownNat n, KnownNat m) => F.Array [m, n] a -> M.Matrix a
+toMatrix a = M.matrix m n (index a . (\(i, j) -> [i, j]))
   where
-    (m:n:_) = F.shape a
+    (m : n : _) = F.shape a
 
-fromMatrix :: (KnownNat n, KnownNat m) => M.Matrix a -> F.Array [m,n] a
+fromMatrix :: (KnownNat n, KnownNat m) => M.Matrix a -> F.Array [m, n] a
 fromMatrix = fromList . M.toList
 
 data MatrixException = MatrixException
-    deriving Show
+  deriving (Show)
 
 instance Exception MatrixException
 
 -- | The inverse of a square matrix.
-inverse :: (KnownNat n, Fractional a, Eq a) => F.Array [n,n] a -> F.Array [n,n] a
+inverse :: (KnownNat n, Fractional a, Eq a) => F.Array [n, n] a -> F.Array [n, n] a
 inverse = either (const $ throw MatrixException) fromMatrix . M.inverse . toMatrix
 
 rsOnline :: (Field a, KnownNat n) => a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a
@@ -513,15 +512,14 @@ depState f (M sInject sStep sExtract) = M inject step extract
 -- s_{t+1} & = (alpha_t^s + beta_t^{x->s} * ma_t^x + beta_t^{s->s} * std_t^x) * N(0,1)
 -- \end{align}
 -- \]
-data Model1
-  = Model1
-      { alphaX :: Double,
-        alphaS :: Double,
-        betaMa2X :: Double,
-        betaMa2S :: Double,
-        betaStd2X :: Double,
-        betaStd2S :: Double
-      }
+data Model1 = Model1
+  { alphaX :: Double,
+    alphaS :: Double,
+    betaMa2X :: Double,
+    betaMa2S :: Double,
+    betaStd2X :: Double,
+    betaStd2S :: Double
+  }
   deriving (Eq, Show, Generic)
 
 zeroModel1 :: Model1
@@ -544,8 +542,10 @@ depModel1 r m1 =
               + (m1 ^. #betaStd2S) * (s - 1)
           )
         + m1 ^. #alphaX
-        + (m1 ^. #betaMa2X) * m
-        + (m1 ^. #betaStd2X) * (s - 1)
+        + (m1 ^. #betaMa2X)
+        * m
+        + (m1 ^. #betaStd2X)
+        * (s - 1)
 
 foldB :: (Reifies s W) => (BVar s Double -> BVar s Double) -> BVar s Double -> BVar s [Double] -> BVar s Double
 foldB f r xs = divide (PB.foldl' (step' f r) (B.T2 0 0) xs)
@@ -558,12 +558,11 @@ maB = foldB id
 
 -- | A rough Median.
 -- The average absolute value of the stat is used to callibrate estimate drift towards the median
-data Medianer a b
-  = Medianer
-      { medAbsSum :: a,
-        medCount :: b,
-        medianEst :: a
-      }
+data Medianer a b = Medianer
+  { medAbsSum :: a,
+    medCount :: b,
+    medianEst :: a
+  }
 
 -- | onlineL1' takes a function and turns it into a `Mealy` where the step is an incremental update of an (isomorphic) median statistic.
 onlineL1' ::
