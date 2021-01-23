@@ -15,8 +15,7 @@ where
 
 import Control.Monad.Primitive (PrimState)
 import NumHask.Prelude hiding (fold)
-import System.Random.MWC
-import System.Random.MWC.Probability hiding (beta)
+import System.Random.MWC.Probability
 
 -- $setup
 -- >>> :set -XFlexibleContexts

@@ -1,7 +1,8 @@
 cabal-version: 2.4
 name:          mealy
-version:       0.0.2
+version:       0.0.3
 synopsis: See readme.md
+
 description: See readme.md for description.
 category: project
 author: Tony Day
@@ -20,17 +21,14 @@ library
     src
   build-depends:
     adjunctions >= 4.4,
-    backprop >= 0.2.6.4 && < 0.3,
     base >=4.7 && <5,
     containers >= 0.6,
     folds,
     generic-lens >= 2.0,
-    hmatrix >= 0.20,
     lens,
     matrix >= 0.3.6 && < 0.3.7,
-    mwc-probability,
-    mwc-random,
-    numhask >= 0.7 && < 0.8,
+    mwc-probability >= 2.3.1 && < 2.4,
+    numhask >= 0.7.1 && < 0.8,
     numhask-array >= 0.8 && < 0.9,
     primitive >= 0.7,
     profunctors >= 5.5,
@@ -45,10 +43,6 @@ library
   other-modules:
   default-language: Haskell2010
   default-extensions:
-    NoImplicitPrelude
-    NegativeLiterals
-    OverloadedStrings
-    UnicodeSyntax
   ghc-options:
     -Wall
     -Wcompat
@@ -70,10 +64,6 @@ test-suite test
     mealy
   default-language: Haskell2010
   default-extensions:
-    NoImplicitPrelude
-    NegativeLiterals
-    OverloadedStrings
-    UnicodeSyntax
   ghc-options:
     -Wall
     -Wcompat

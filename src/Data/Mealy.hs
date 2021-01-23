@@ -60,10 +60,6 @@ module Data.Mealy
     zeroModel1,
     depModel1,
 
-    -- * conversion
-    foldB,
-    maB,
-
     -- * median
     Medianer (..),
     onlineL1,
@@ -77,7 +73,6 @@ import Control.Lens hiding (Empty, Unwrapped, Wrapped, index, (:>), (|>))
 import Data.Fold hiding (M)
 import Data.Functor.Rep
 import Data.Generics.Labels ()
--- import qualified NumHask.Array.HMatrix as HM
 
 -- import qualified Numeric.LinearAlgebra as LA
 
@@ -86,10 +81,6 @@ import qualified Data.Sequence as Seq
 import qualified NumHask.Array.Fixed as F
 import NumHask.Array.Shape (HasShape)
 import NumHask.Prelude hiding (L1, State, StateT, asum, fold, get, replace, runState, runStateT, state)
-import Numeric.Backprop (BVar, Reifies, W)
-import qualified Numeric.Backprop as B
-import qualified Prelude.Backprop as PB
-import qualified Prelude as P
 
 -- $setup
 -- Generate some random variates for the examples.
@@ -546,15 +537,6 @@ depModel1 r m1 =
         * m
         + (m1 ^. #betaStd2X)
         * (s - 1)
-
-foldB :: (Reifies s W) => (BVar s Double -> BVar s Double) -> BVar s Double -> BVar s [Double] -> BVar s Double
-foldB f r xs = divide (PB.foldl' (step' f r) (B.T2 0 0) xs)
-  where
-    step' f' r' (B.T2 s c) a = uncurry B.T2 ((r P.*) $ s P.+ f' a, (r' P.*) $ c P.+ 1)
-    divide (B.T2 s c) = s P./ c
-
-maB :: Reifies s W => BVar s Double -> BVar s [Double] -> BVar s Double
-maB = foldB id
 
 -- | A rough Median.
 -- The average absolute value of the stat is used to callibrate estimate drift towards the median
