@@ -9,6 +9,7 @@ module Data.Mealy.Quantiles
   )
 where
 
+import Control.Monad.ST
 import Data.Mealy
 import Data.Ord
 import Data.TDigest hiding (median)
@@ -17,7 +18,6 @@ import Data.TDigest.Tree.Internal (TDigest (..), absMaxSize, emptyTDigest, inser
 import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed as VU
 import NumHask.Prelude hiding (fold)
-import Control.Monad.ST
 
 data OnlineTDigest = OnlineTDigest
   { td :: TDigest 25,
@@ -51,7 +51,7 @@ median r = M inject step extract
 onlineInsert' :: Double -> OnlineTDigest -> OnlineTDigest
 onlineInsert' x (OnlineTDigest td' n r) =
   OnlineTDigest
-    (insertCentroid (x, r ^^ (- (fromIntegral $ n + 1) :: Integer)) td')
+    (insertCentroid (x, r ^^ (-(fromIntegral $ n + 1) :: Integer)) td')
     (n + 1)
     r
 

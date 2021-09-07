@@ -69,22 +69,22 @@ module Data.Mealy
   )
 where
 
+import Control.Category
+import Control.Exception
 import Control.Lens hiding (Empty, Unwrapped, Wrapped, index, (:>), (|>))
 import Data.Fold hiding (M)
 import Data.Functor.Rep
 import Data.Generics.Labels ()
+import Data.List (scanl')
 import qualified Data.Matrix as M
-import qualified Data.Sequence as Seq
 import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import Data.Text (Text)
+import Data.Typeable (Typeable)
+import GHC.TypeLits
 import qualified NumHask.Array.Fixed as F
 import NumHask.Array.Shape (HasShape)
-import NumHask.Prelude hiding ((.), id, L1, asum, fold)
-import GHC.TypeLits
-import Control.Category
-import Control.Exception
-import Data.List (scanl')
-import Data.Typeable (Typeable)
-import Data.Text (Text)
+import NumHask.Prelude hiding (L1, asum, fold, id, (.))
 
 -- $setup
 -- Generate some random variates for the examples.
@@ -103,7 +103,7 @@ import Data.Text (Text)
 -- >>> xs2 <- rvs g 10000
 -- >>> xsp <- rvsp g 10000 0.8
 
-newtype MealyError = MealyError { mealyErrorMessage :: Text }
+newtype MealyError = MealyError {mealyErrorMessage :: Text}
   deriving (Show, Typeable)
 
 instance Exception MealyError
