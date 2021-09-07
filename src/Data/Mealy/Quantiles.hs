@@ -2,6 +2,7 @@
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE StrictData #-}
 
+-- | Mealy quantile statistics.
 module Data.Mealy.Quantiles
   ( median,
     quantiles,
@@ -29,7 +30,7 @@ data OnlineTDigest = OnlineTDigest
 emptyOnlineTDigest :: Double -> OnlineTDigest
 emptyOnlineTDigest = OnlineTDigest (emptyTDigest :: TDigest n) 0
 
--- | decaying quantiles based on the tdigest library
+-- | Mealy quantiles based on the tdigest library
 quantiles :: Double -> [Double] -> Mealy Double [Double]
 quantiles r qs = M inject step extract
   where
@@ -39,6 +40,9 @@ quantiles r qs = M inject step extract
       where
         (OnlineTDigest t _ _) = onlineForceCompress x
 
+-- | Mealy median using 'tdigest'
+--
+-- The tdigest algorithm works best at extremes and can be unreliable in the centre.
 median :: Double -> Mealy Double Double
 median r = M inject step extract
   where
@@ -84,6 +88,12 @@ onlineForceCompress (OnlineTDigest t n r) = OnlineTDigest t' 0 r
         VHeap.sortBy (comparing snd) v
         VU.unsafeFreeze v
 
+-- | A mealy that computes the running quantile bucket. For example,
+-- in a scan, @digitize 0.9 [0,0.5,1]@ returns:
+--
+-- * 0 if the current value is less than the current mealy median.
+--
+-- * 1 if the current value is greater than the current mealy median.
 digitize :: Double -> [Double] -> Mealy Double Int
 digitize r qs = M inject step extract
   where

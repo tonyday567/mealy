@@ -37,7 +37,7 @@ module Data.Mealy
     online,
 
     -- * Statistics
-    -- $setup
+    -- $example-set
     ma,
     absma,
     sqma,
@@ -87,15 +87,25 @@ import NumHask.Array.Shape (HasShape)
 import NumHask.Prelude hiding (L1, asum, fold, id, (.))
 
 -- $setup
--- Generate some random variates for the examples.
---
--- xs0, xs1 & xs2 are samples from N(0,1)
---
--- xsp is a pair of N(0,1)s with a correlation of 0.8
 --
 -- >>> :set -XDataKinds
 -- >>> import Control.Category ((>>>))
 -- >>> import Data.List
+-- >>> import Data.Mealy.Simulate
+-- >>> g <- create
+-- >>> xs0 <- rvs g 10000
+-- >>> xs1 <- rvs g 10000
+-- >>> xs2 <- rvs g 10000
+-- >>> xsp <- rvsp g 10000 0.8
+
+-- $example-set
+-- The doctest examples are composed from some random series generated with Data.Mealy.Simulate.
+--
+-- - xs0, xs1 & xs2 are samples from N(0,1)
+--
+-- - xsp is a pair of N(0,1)s with a correlation of 0.8
+--
+-- >>> :set -XDataKinds
 -- >>> import Data.Mealy.Simulate
 -- >>> g <- create
 -- >>> xs0 <- rvs g 10000
@@ -184,9 +194,26 @@ av (A s c) = s / c
 av_ :: (Eq a, Additive a, Divisive a) => Averager a a -> a -> a
 av_ (A s c) def = bool def (s / c) (c == zero)
 
--- | @online f g@ is a 'Mealy' where f is a transformation of the data and g is a decay function (convergent tozero) applied at each step.
+-- | @online f g@ is a 'Mealy' where f is a transformation of the data and
+-- g is a decay function (usually convergent to zero) applied at each step.
 --
 -- > online id id == av
+--
+-- @online@ is best understood by examining usage
+-- to produce a moving average and standard deviation:
+--
+-- An exponentially-weighted moving average with a decay rate of 0.9
+--
+-- > ma r == online id (*r)
+--
+-- An exponentially-weighted moving average of the square.
+--
+-- > sqma r = online (\x -> x * x) (* r)
+--
+-- Applicative-style exponentially-weighted standard deviation computation:
+--
+-- > std r = (\s ss -> sqrt (ss - s ** 2)) <$> ma r <*> sqma r
+--
 online :: (Divisive b, Additive b) => (a -> b) -> (b -> b) -> Mealy a b
 online f g = M intract step av
   where
@@ -206,9 +233,6 @@ online f g = M intract step av
 -- >>> fold (ma 0.99) xs0
 -- 9.713356299018187e-2
 --
--- A change in the underlying mean at n=10000 in the chart below highlights the trade-off between stability of the statistic and response to non-stationarity.
---
--- ![ma chart](other/ex-ma.svg)
 ma :: (Divisive a, Additive a) => a -> Mealy a a
 ma r = online id (* r)
 {-# INLINEABLE ma #-}
@@ -248,7 +272,6 @@ sqma r = online (\x -> x * x) (* r)
 -- >>> fold (std 1) xs0
 -- 1.0126438036262801
 --
--- ![std chart](other/ex-std.svg)
 std :: (Divisive a, ExpField a) => a -> Mealy a a
 std r = (\s ss -> sqrt (ss - s ** (one + one))) <$> ma r <*> sqma r
 {-# INLINEABLE std #-}
@@ -488,15 +511,6 @@ delay x0 = M inject step extract
 -- >>> xsb - xsb0
 -- 0.10000000000000009
 --
--- This simple model of relationship between a series and it's historical average shows how fragile the evidence can be.
---
--- ![madep](other/ex-madep.svg)
---
--- In unravelling the drivers of this result, the standard deviation of a moving average scan seems well behaved for r > 0.01, but increases substantively for values less than this.  This result seems to occur for wide beta values. For high r, the standard deviation of the moving average seems to be proprtional to r**0.5, and equal to around (0.5*r)**0.5.
---
--- > fold (std 1) (scan (ma (1 - 0.01)) xs0)
---
--- ![stdma](other/ex-stdma.svg)
 depState :: (a -> b -> a) -> Mealy a b -> Mealy a a
 depState f (M sInject sStep sExtract) = M inject step extract
   where
@@ -522,6 +536,7 @@ data Model1 = Model1
   }
   deriving (Eq, Show, Generic)
 
+-- | zeroised Model1
 zeroModel1 :: Model1
 zeroModel1 = Model1 0 0 0 0 0 0
 

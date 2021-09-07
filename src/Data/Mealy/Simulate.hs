@@ -6,6 +6,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 
+-- | simulation to support testing of Mealy's using mwc-probability
 module Data.Mealy.Simulate
   ( rvs,
     rvsp,
@@ -21,10 +22,13 @@ import System.Random.MWC.Probability
 -- >>> :set -XFlexibleContexts
 -- >>> import Data.Mealy
 -- >>> gen <- create
--- >>> let n = 3
 
 -- | rvs creates a list of standard normal random variates.
--- >>> rvs gen n
+--
+-- >>> import Data.Mealy
+-- >>> import Data.Mealy.Simulate
+-- >>> gen <- create
+-- >>> rvs gen 3
 -- [1.8005943761746166e-2,0.36444481359059255,-1.2939898115295387]
 --
 -- >>> rs <- rvs gen 10000
@@ -37,7 +41,7 @@ rvs :: Gen (PrimState IO) -> Int -> IO [Double]
 rvs gen n = samples n standardNormal gen
 
 -- | rvsPair generates a list of correlated random variate tuples
--- |
+--
 -- >>> rvsp gen 3 0.8
 -- [(1.8005943761746166e-2,7.074509906249835e-2),(0.36444481359059255,-0.7073208451897444),(-1.2939898115295387,-0.643930709405127)]
 --
