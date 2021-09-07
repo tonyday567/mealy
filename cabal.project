@@ -1,2 +1,4 @@
 packages:
   mealy.cabal
+
+allow-newer: True

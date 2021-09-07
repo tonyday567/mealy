@@ -11,6 +11,7 @@ synopsis:      See readme.md
 description:   See readme.md for description.
 category:      project
 build-type:    Simple
+tested-with:   GHC ==8.8.4 || ==8.10.4 || ==9.0.1 || ==9.2.0.20210821
 
 source-repository head
   type:     git
