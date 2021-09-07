@@ -1,6 +1,4 @@
 cradle:
-  stack:
+  cabal:
     - path: "./src"
-      component: "mealy:lib"
-    - path: "./test"
-      component: "mealy:test"
+      component: "mealy:lib:mealy"

@@ -17,6 +17,7 @@ import Data.TDigest.Tree.Internal (TDigest (..), absMaxSize, emptyTDigest, inser
 import qualified Data.Vector.Algorithms.Heap as VHeap
 import qualified Data.Vector.Unboxed as VU
 import NumHask.Prelude hiding (fold)
+import Control.Monad.ST
 
 data OnlineTDigest = OnlineTDigest
   { td :: TDigest 25,

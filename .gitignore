@@ -4,3 +4,4 @@ TAGS
 /.DS_Store
 stack.yaml.lock
 /.hie/
+/cabal.project.local*

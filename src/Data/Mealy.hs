@@ -73,14 +73,18 @@ import Control.Lens hiding (Empty, Unwrapped, Wrapped, index, (:>), (|>))
 import Data.Fold hiding (M)
 import Data.Functor.Rep
 import Data.Generics.Labels ()
-
--- import qualified Numeric.LinearAlgebra as LA
-
 import qualified Data.Matrix as M
 import qualified Data.Sequence as Seq
+import Data.Sequence (Seq)
 import qualified NumHask.Array.Fixed as F
 import NumHask.Array.Shape (HasShape)
-import NumHask.Prelude hiding (L1, State, StateT, asum, fold, get, replace, runState, runStateT, state)
+import NumHask.Prelude hiding ((.), id, L1, asum, fold)
+import GHC.TypeLits
+import Control.Category
+import Control.Exception
+import Data.List (scanl')
+import Data.Typeable (Typeable)
+import Data.Text (Text)
 
 -- $setup
 -- Generate some random variates for the examples.
@@ -98,6 +102,11 @@ import NumHask.Prelude hiding (L1, State, StateT, asum, fold, get, replace, runS
 -- >>> xs1 <- rvs g 10000
 -- >>> xs2 <- rvs g 10000
 -- >>> xsp <- rvsp g 10000 0.8
+
+newtype MealyError = MealyError { mealyErrorMessage :: Text }
+  deriving (Show, Typeable)
+
+instance Exception MealyError
 
 -- | A 'Mealy' is a triple of functions
 --
@@ -130,7 +139,7 @@ pattern M i s e = Mealy (L1 e s i)
 --
 -- > cosieve == fold
 fold :: Mealy a b -> [a] -> b
-fold _ [] = panic "on the streets of Birmingham."
+fold _ [] = throw (MealyError "empty list")
 fold (M i s e) (x : xs) = e $ foldl' s (i x) xs
 
 -- | Run a list through a 'Mealy' and return a list of values for every step
@@ -188,14 +197,14 @@ online f g = M intract step av
 
 -- | A moving average using a decay rate of r. r=1 represents the simple average, and r=0 represents the latest value.
 --
--- >>> fold (ma 0) (fromList [1..100])
+-- >>> fold (ma 0) ([1..100])
 -- 100.0
 --
--- >>> fold (ma 1) (fromList [1..100])
+-- >>> fold (ma 1) ([1..100])
 -- 50.5
 --
 -- >>> fold (ma 0.99) xs0
--- -4.292501077490672e-2
+-- 9.713356299018187e-2
 --
 -- A change in the underlying mean at n=10000 in the chart below highlights the trade-off between stability of the statistic and response to non-stationarity.
 --
@@ -207,7 +216,7 @@ ma r = online id (* r)
 -- | absolute average
 --
 -- >>> fold (absma 1) xs0
--- 0.7894201075535578
+-- 0.8075705557429647
 absma :: (Divisive a, Signed a) => a -> Mealy a a
 absma r = online abs (* r)
 {-# INLINEABLE absma #-}
@@ -237,7 +246,7 @@ sqma r = online (\x -> x * x) (* r)
 -- 99.28328803163829
 --
 -- >>> fold (std 1) xs0
--- 0.9923523681261158
+-- 1.0126438036262801
 --
 -- ![std chart](other/ex-std.svg)
 std :: (Divisive a, ExpField a) => a -> Mealy a a
@@ -247,7 +256,7 @@ std r = (\s ss -> sqrt (ss - s ** (one + one))) <$> ma r <*> sqma r
 -- | The covariance of a tuple given an underlying central tendency fold.
 --
 -- >>> fold (cov (ma 1)) xsp
--- 0.8011368250045314
+-- 0.7818936662586868
 cov :: (Field a) => Mealy a a -> Mealy (a, a) a
 cov m =
   (\xy x' y' -> xy - x' * y') <$> lmap (uncurry (*)) m <*> lmap fst m <*> lmap snd m
@@ -256,7 +265,7 @@ cov m =
 -- | correlation of a tuple, specialised to Guassian
 --
 -- >>> fold (corrGauss 1) xsp
--- 0.8020637696465039
+-- 0.7978347126677433
 corrGauss :: (ExpField a) => a -> Mealy (a, a) a
 corrGauss r =
   (\cov' stdx stdy -> cov' / (stdx * stdy)) <$> cov (ma r)
@@ -267,7 +276,7 @@ corrGauss r =
 -- | a generalised version of correlation of a tuple
 --
 -- >>> fold (corr (ma 1) (std 1)) xsp
--- 0.8020637696465039
+-- 0.7978347126677433
 --
 -- > corr (ma r) (std r) == corrGauss r
 corr :: (ExpField a) => Mealy a a -> Mealy a a -> Mealy (a, a) a
@@ -290,7 +299,7 @@ corr central deviation =
 -- \]
 --
 -- >>> fold (beta1 (ma 1)) $ zipWith (\x y -> (y, x + y)) xs0 xs1
--- 0.9953875263096014
+-- 0.999747321294513
 beta1 :: (ExpField a) => Mealy a a -> Mealy (a, a) a
 beta1 m =
   (\xy x' y' x2 -> (xy - x' * y') / (x2 - x' * x')) <$> lmap (uncurry (*)) m
@@ -310,7 +319,7 @@ beta1 m =
 -- \]
 --
 -- >>> fold (alpha1 (ma 1)) $ zipWith (\x y -> ((3+y), x + 0.5 * (3 + y))) xs0 xs1
--- 1.1880996822796197e-2
+-- 1.3680496627365146e-2
 alpha1 :: (ExpField a) => Mealy a a -> Mealy (a, a) a
 alpha1 m = (\x b y -> y - b * x) <$> lmap fst m <*> beta1 m <*> lmap snd m
 {-# INLINEABLE alpha1 #-}
@@ -318,7 +327,7 @@ alpha1 m = (\x b y -> y - b * x) <$> lmap fst m <*> beta1 m <*> lmap snd m
 -- | The (alpha, beta) tuple in a simple linear regression of an (independent variable, single dependent variable) tuple given an underlying central tendency fold.
 --
 -- >>> fold (reg1 (ma 1)) $ zipWith (\x y -> ((3+y), x + 0.5 * (3 + y))) xs0 xs1
--- (1.1880996822796197e-2,0.49538752630956845)
+-- (1.3680496627365146e-2,0.4997473212944953)
 reg1 :: (ExpField a) => Mealy a a -> Mealy (a, a) (a, a)
 reg1 m = (,) <$> alpha1 m <*> beta1 m
 
@@ -441,10 +450,10 @@ delay x0 = M inject step extract
   where
     inject a = Seq.fromList x0 Seq.|> a
     extract :: Seq a -> a
-    extract Seq.Empty = panic "ACAB"
+    extract Seq.Empty = throw (MealyError "empty seq")
     extract (x Seq.:<| _) = x
     step :: Seq a -> a -> Seq a
-    step Seq.Empty _ = panic "ACAB"
+    step Seq.Empty _ = throw (MealyError "empty seq")
     step (_ Seq.:<| xs) a = xs Seq.|> a
 
 -- | Add a state dependency to a series.
@@ -477,7 +486,7 @@ delay x0 = M inject step extract
 -- >>> -- beta measurement if beta of ma was, in reality, zero.
 -- >>> let xsb0 = fold (beta1 (ma (1 - 0.001))) $ drop 1 $ zip ma' xs0
 -- >>> xsb - xsb0
--- 9.999999999999976e-2
+-- 0.10000000000000009
 --
 -- This simple model of relationship between a series and it's historical average shows how fragile the evidence can be.
 --
@@ -519,8 +528,9 @@ zeroModel1 = Model1 0 0 0 0 0 0
 -- | Apply a model1 relationship using a single decay factor.
 --
 -- >>> :set -XOverloadedLabels
+-- >>> import Control.Lens
 -- >>> fold (depModel1 0.01 (zeroModel1 & #betaMa2X .~ 0.1)) xs0
--- -0.47228537123218206
+-- -0.4591515493154126
 depModel1 :: Double -> Model1 -> Mealy Double Double
 depModel1 r m1 =
   depState fX st

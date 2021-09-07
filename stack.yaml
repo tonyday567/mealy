@@ -1,9 +1,0 @@
-resolver: nightly-2021-02-12
-
-packages:
-  - .
-
-extra-deps:
-  - numhask-0.7.1.0
-  - numhask-array-0.8.0
-  - random-1.2.0
