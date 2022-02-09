@@ -71,12 +71,11 @@ where
 
 import Control.Category
 import Control.Exception
-import Control.Lens hiding (Empty, Unwrapped, Wrapped, index, (:>), (|>))
 import Data.Fold hiding (M)
 import Data.Functor.Rep
-import Data.Generics.Labels ()
 import Data.List (scanl')
 import qualified Data.Matrix as M
+import Data.Profunctor
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Text (Text)
@@ -85,6 +84,7 @@ import GHC.TypeLits
 import qualified NumHask.Array.Fixed as F
 import NumHask.Array.Shape (HasShape)
 import NumHask.Prelude hiding (L1, asum, fold, id, (.))
+import Optics.Core
 
 -- $setup
 --
@@ -213,7 +213,6 @@ av_ (A s c) def = bool def (s / c) (c == zero)
 -- Applicative-style exponentially-weighted standard deviation computation:
 --
 -- > std r = (\s ss -> sqrt (ss - s ** 2)) <$> ma r <*> sqma r
---
 online :: (Divisive b, Additive b) => (a -> b) -> (b -> b) -> Mealy a b
 online f g = M intract step av
   where
@@ -232,7 +231,6 @@ online f g = M intract step av
 --
 -- >>> fold (ma 0.99) xs0
 -- 9.713356299018187e-2
---
 ma :: (Divisive a, Additive a) => a -> Mealy a a
 ma r = online id (* r)
 {-# INLINEABLE ma #-}
@@ -271,7 +269,6 @@ sqma r = online (\x -> x * x) (* r)
 --
 -- >>> fold (std 1) xs0
 -- 1.0126438036262801
---
 std :: (Divisive a, ExpField a) => a -> Mealy a a
 std r = (\s ss -> sqrt (ss - s ** (one + one))) <$> ma r <*> sqma r
 {-# INLINEABLE std #-}
@@ -510,7 +507,6 @@ delay x0 = M inject step extract
 -- >>> let xsb0 = fold (beta1 (ma (1 - 0.001))) $ drop 1 $ zip ma' xs0
 -- >>> xsb - xsb0
 -- 0.10000000000000009
---
 depState :: (a -> b -> a) -> Mealy a b -> Mealy a a
 depState f (M sInject sStep sExtract) = M inject step extract
   where
@@ -543,7 +539,7 @@ zeroModel1 = Model1 0 0 0 0 0 0
 -- | Apply a model1 relationship using a single decay factor.
 --
 -- >>> :set -XOverloadedLabels
--- >>> import Control.Lens
+-- >>> import Optics.Core
 -- >>> fold (depModel1 0.01 (zeroModel1 & #betaMa2X .~ 0.1)) xs0
 -- -0.4591515493154126
 depModel1 :: Double -> Model1 -> Mealy Double Double
