@@ -1,0 +1,24 @@
+#+TITLE: chart-svg
+
+[[https://hackage.haskell.org/package/mealy][file:https://img.shields.io/hackage/v/mealy.svg]] [[https://github.com/tonyday567/mealy/actions?query=workflow%3Ahaskell-ci][file:https://github.com/tonyday567/mealy/workflows/haskell-ci/badge.svg]]
+
+A 'Mealy' is a triple of functions
+
+- (a -> b) *inject*: Convert (initial) input into the (initial) state type.
+- (b -> a -> b) *step*: Update state given prior state and (new) input.
+- (c -> b) *extract*: Convert state to the output type.
+
+A sum, for example, looks like ~M id (+) id~ where the first id is the initial injection and the second id is the covariant extraction.
+
+* Usage
+
+#+begin_src haskell :results output
+:set prompt "> "
+import Prelude
+import Data.Mealy
+fold (ma 0.9) [1..100::Double]
+#+end_src
+
+#+RESULTS:
+:
+: > > 91.00265621044142
