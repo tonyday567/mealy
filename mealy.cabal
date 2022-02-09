@@ -1,8 +1,8 @@
 cabal-version: 2.4
 name:          mealy
-version:       0.1.0
+version:       0.2.0
 license:       BSD-3-Clause
-copyright:     Tony Day (c) AfterTimes
+copyright:     Tony Day (c) 2013 - 2022
 maintainer:    tonyday567@gmail.com
 author:        Tony Day
 homepage:      https://github.com/tonyday567/mealy#readme
