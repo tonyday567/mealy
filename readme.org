@@ -27,3 +27,8 @@ fold ((,) <$> ma 0.9 <*> std 0.9) [1..100::Double]
 #+RESULTS:
 :
 : > > 91.00265621044142
+
+
+* Reference
+
+[[https://stackoverflow.com/questions/27997155/finite-state-transducers-in-haskell][Finite State Transducers]]
