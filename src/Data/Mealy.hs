@@ -27,6 +27,7 @@
 module Data.Mealy
   ( -- * Types
     Mealy (..),
+    dipure,
     pattern M,
     scan,
     fold,
@@ -53,6 +54,8 @@ module Data.Mealy
     reg,
     asum,
     aconst,
+    last,
+    maybeLast,
     delay1,
     delay,
     depState,
@@ -66,6 +69,8 @@ module Data.Mealy
     onlineL1',
     maL1,
     absmaL1,
+
+    window,
   )
 where
 
@@ -83,7 +88,7 @@ import Data.Typeable (Typeable)
 import GHC.TypeLits
 import qualified NumHask.Array.Fixed as F
 import NumHask.Array.Shape (HasShape)
-import NumHask.Prelude hiding (L1, asum, fold, id, (.))
+import NumHask.Prelude hiding (L1, asum, fold, id, (.), last)
 import Optics.Core
 
 -- $setup
@@ -144,6 +149,9 @@ pattern M :: (a -> c) -> (c -> a -> c) -> (c -> b) -> Mealy a b
 pattern M i s e = Mealy (L1 e s i)
 
 {-# COMPLETE M #-}
+
+dipure :: (a -> a -> a) -> Mealy a a
+dipure f = M id f id
 
 -- | Fold a list through a 'Mealy'.
 --
@@ -444,6 +452,14 @@ asum = M id (+) id
 aconst :: b -> Mealy a b
 aconst b = M (const ()) (\_ _ -> ()) (const b)
 
+-- | most recent value
+last  :: Mealy a a
+last = M id (\_ a -> a) id
+
+-- | most recent value if it exists, previous value otherwise.
+maybeLast :: a -> Mealy (Maybe a) a
+maybeLast def = M (fromMaybe def) fromMaybe id
+
 -- | delay input values by 1
 delay1 :: a -> Mealy a a
 delay1 x0 = M (x0,) (\(_, x) a -> (x, a)) fst
@@ -614,3 +630,8 @@ maL1 i d r = onlineL1 i d id (* r)
 absmaL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> Mealy a a
 absmaL1 i d r = fst <$> onlineL1' i d id (* r)
 {-# INLINEABLE absmaL1 #-}
+
+-- | a window of a's
+window :: Int -> Mealy a [a]
+window n = M Seq.singleton (\xs x -> Seq.take n (x Seq.<| xs)) (reverse . toList)
+{-# INLINEABLE window #-}
