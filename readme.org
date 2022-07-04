@@ -10,8 +10,8 @@ A 'Mealy' is a triple of functions
 
 A sum, for example, looks like ~M id (+) id~ where the first id is the initial injection and the second id is the covariant extraction.
 
-The libary provides support for computing statistics (such as an average or a standard deviation)
-as current state.
+This library provides support for computing statistics (such as an average or a standard deviation)
+as current state within a mealy context.
 
 * Usage
 
@@ -21,12 +21,14 @@ Usage is to supply a decay function representing the relative weights of recent 
 :set prompt "> "
 import Prelude
 import Data.Mealy
+#+end_src
+
+#+begin_src haskell :results output
 fold ((,) <$> ma 0.9 <*> std 0.9) [1..100::Double]
 #+end_src
 
 #+RESULTS:
-:
-: > > 91.00265621044142
+: (91.00265621044142,9.472822805289121)
 
 
 * Reference

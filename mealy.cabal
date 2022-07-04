@@ -44,7 +44,6 @@ library
     , adjunctions        ^>=4.4
     , base               >=4.13   && <5
     , containers         ^>=0.6.2
-    , folds              ^>=0.7.6
     , matrix             ^>=0.3.6
     , mwc-probability    ^>=2.3.1
     , numhask            ^>=0.10

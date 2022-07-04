@@ -70,13 +70,13 @@ module Data.Mealy
     maL1,
     absmaL1,
 
+    inverse,
     window,
   )
 where
 
 import Control.Category
 import Control.Exception
-import Data.Fold hiding (M)
 import Data.Functor.Rep
 import Data.List (scanl')
 import qualified Data.Matrix as M
@@ -133,21 +133,49 @@ instance Exception MealyError
 --
 -- > M id (+) id
 --
--- where the first id is the initial injection to a contravariant position, and the second id is the covriant extraction.
+-- where the first id is the initial injection to a contravariant position, and the second id is the covariant extraction.
 --
 -- __inject__ kicks off state on the initial element of the Foldable, but is otherwise be independent of __step__.
 --
 -- > scan (M e s i) (x : xs) = e <$> scanl' s (i x) xs
-newtype Mealy a b = Mealy {l1 :: L1 a b}
-  deriving (Profunctor, Category) via L1
-  deriving (Functor, Applicative) via L1 a
+data Mealy a b = forall c. Mealy (a -> c) (c -> a -> c) (c -> b)
 
--- | Pattern for a 'Mealy'.
+-- | Strict Pair
+data Pair' a b = Pair' !a !b deriving (Eq,Ord,Show,Read)
+
+instance (Semigroup a, Semigroup b) => Semigroup (Pair' a b) where
+  Pair' a b <> Pair' c d = Pair' (a <> c) (b <> d)
+  {-# INLINE (<>) #-}
+
+instance (Monoid a, Monoid b) => Monoid (Pair' a b) where
+  mempty = Pair' mempty mempty
+
+instance Functor (Mealy a) where
+  fmap f (Mealy z h k) = Mealy z h (f.k)
+
+instance Applicative (Mealy a) where
+  pure x = Mealy  (\_ -> ()) (\() _ -> ()) (\() -> x)
+  Mealy zf hf kf <*> Mealy za ha ka = Mealy
+    (\a -> Pair' (zf a) (za a))
+    (\(Pair' x y) a -> Pair' (hf x a) (ha y a))
+    (\(Pair' x y) -> kf x (ka y))
+
+instance Category Mealy where
+  id = Mealy id (\_ a -> a) id
+  Mealy z h k . Mealy z' h' k' = Mealy z'' h'' (\(Pair' b _) -> k b) where
+    z'' a = Pair' (z (k' b)) b where b = z' a
+    h'' (Pair' c d) a = Pair' (h c (k' d')) d' where d' = h' d a
+
+instance Profunctor Mealy where
+  dimap f g (Mealy z h k) = Mealy (z.f) (\a -> h a . f) (g.k)
+  lmap f (Mealy z h k) = Mealy (z.f) (\a -> h a . f) k
+  rmap g (Mealy z h k) = Mealy z h (g.k)
+
+-- | Convenience pattern for a 'Mealy'.
 --
 -- @M extract step inject@
 pattern M :: (a -> c) -> (c -> a -> c) -> (c -> b) -> Mealy a b
-pattern M i s e = Mealy (L1 e s i)
-
+pattern M i s e = Mealy i s e
 {-# COMPLETE M #-}
 
 dipure :: (a -> a -> a) -> Mealy a a
