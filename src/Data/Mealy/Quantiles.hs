@@ -67,7 +67,7 @@ onlineCompress otd@(OnlineTDigest Nil _ _) = otd
 onlineCompress otd@(OnlineTDigest t _ _)
   | Data.TDigest.Tree.Internal.size t > relMaxSize * compression
       && Data.TDigest.Tree.Internal.size t > absMaxSize =
-    onlineForceCompress otd
+      onlineForceCompress otd
   | otherwise = otd
   where
     compression = 25

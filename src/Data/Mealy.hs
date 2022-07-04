@@ -69,7 +69,6 @@ module Data.Mealy
     onlineL1',
     maL1,
     absmaL1,
-
     inverse,
     window,
   )
@@ -88,7 +87,7 @@ import Data.Typeable (Typeable)
 import GHC.TypeLits
 import qualified NumHask.Array.Fixed as F
 import NumHask.Array.Shape (HasShape)
-import NumHask.Prelude hiding (L1, asum, fold, id, (.), last)
+import NumHask.Prelude hiding (L1, asum, fold, id, last, (.))
 import Optics.Core
 
 -- $setup
@@ -141,7 +140,7 @@ instance Exception MealyError
 data Mealy a b = forall c. Mealy (a -> c) (c -> a -> c) (c -> b)
 
 -- | Strict Pair
-data Pair' a b = Pair' !a !b deriving (Eq,Ord,Show,Read)
+data Pair' a b = Pair' !a !b deriving (Eq, Ord, Show, Read)
 
 instance (Semigroup a, Semigroup b) => Semigroup (Pair' a b) where
   Pair' a b <> Pair' c d = Pair' (a <> c) (b <> d)
@@ -151,31 +150,34 @@ instance (Monoid a, Monoid b) => Monoid (Pair' a b) where
   mempty = Pair' mempty mempty
 
 instance Functor (Mealy a) where
-  fmap f (Mealy z h k) = Mealy z h (f.k)
+  fmap f (Mealy z h k) = Mealy z h (f . k)
 
 instance Applicative (Mealy a) where
-  pure x = Mealy  (\_ -> ()) (\() _ -> ()) (\() -> x)
-  Mealy zf hf kf <*> Mealy za ha ka = Mealy
-    (\a -> Pair' (zf a) (za a))
-    (\(Pair' x y) a -> Pair' (hf x a) (ha y a))
-    (\(Pair' x y) -> kf x (ka y))
+  pure x = Mealy (\_ -> ()) (\() _ -> ()) (\() -> x)
+  Mealy zf hf kf <*> Mealy za ha ka =
+    Mealy
+      (\a -> Pair' (zf a) (za a))
+      (\(Pair' x y) a -> Pair' (hf x a) (ha y a))
+      (\(Pair' x y) -> kf x (ka y))
 
 instance Category Mealy where
   id = Mealy id (\_ a -> a) id
-  Mealy z h k . Mealy z' h' k' = Mealy z'' h'' (\(Pair' b _) -> k b) where
-    z'' a = Pair' (z (k' b)) b where b = z' a
-    h'' (Pair' c d) a = Pair' (h c (k' d')) d' where d' = h' d a
+  Mealy z h k . Mealy z' h' k' = Mealy z'' h'' (\(Pair' b _) -> k b)
+    where
+      z'' a = Pair' (z (k' b)) b where b = z' a
+      h'' (Pair' c d) a = Pair' (h c (k' d')) d' where d' = h' d a
 
 instance Profunctor Mealy where
-  dimap f g (Mealy z h k) = Mealy (z.f) (\a -> h a . f) (g.k)
-  lmap f (Mealy z h k) = Mealy (z.f) (\a -> h a . f) k
-  rmap g (Mealy z h k) = Mealy z h (g.k)
+  dimap f g (Mealy z h k) = Mealy (z . f) (\a -> h a . f) (g . k)
+  lmap f (Mealy z h k) = Mealy (z . f) (\a -> h a . f) k
+  rmap g (Mealy z h k) = Mealy z h (g . k)
 
 -- | Convenience pattern for a 'Mealy'.
 --
 -- @M extract step inject@
 pattern M :: (a -> c) -> (c -> a -> c) -> (c -> b) -> Mealy a b
 pattern M i s e = Mealy i s e
+
 {-# COMPLETE M #-}
 
 dipure :: (a -> a -> a) -> Mealy a a
@@ -324,7 +326,8 @@ cov m =
 -- 0.7978347126677433
 corrGauss :: (ExpField a) => a -> Mealy (a, a) a
 corrGauss r =
-  (\cov' stdx stdy -> cov' / (stdx * stdy)) <$> cov (ma r)
+  (\cov' stdx stdy -> cov' / (stdx * stdy))
+    <$> cov (ma r)
     <*> lmap fst (std r)
     <*> lmap snd (std r)
 {-# INLINEABLE corrGauss #-}
@@ -337,7 +340,8 @@ corrGauss r =
 -- > corr (ma r) (std r) == corrGauss r
 corr :: (ExpField a) => Mealy a a -> Mealy a a -> Mealy (a, a) a
 corr central deviation =
-  (\cov' stdx stdy -> cov' / (stdx * stdy)) <$> cov central
+  (\cov' stdx stdy -> cov' / (stdx * stdy))
+    <$> cov central
     <*> lmap fst deviation
     <*> lmap snd deviation
 {-# INLINEABLE corr #-}
@@ -358,7 +362,8 @@ corr central deviation =
 -- 0.999747321294513
 beta1 :: (ExpField a) => Mealy a a -> Mealy (a, a) a
 beta1 m =
-  (\xy x' y' x2 -> (xy - x' * y') / (x2 - x' * x')) <$> lmap (uncurry (*)) m
+  (\xy x' y' x2 -> (xy - x' * y') / (x2 - x' * x'))
+    <$> lmap (uncurry (*)) m
     <*> lmap fst m
     <*> lmap snd m
     <*> lmap (\(x, _) -> x * x) m
@@ -481,7 +486,7 @@ aconst :: b -> Mealy a b
 aconst b = M (const ()) (\_ _ -> ()) (const b)
 
 -- | most recent value
-last  :: Mealy a a
+last :: Mealy a a
 last = M id (\_ a -> a) id
 
 -- | most recent value if it exists, previous value otherwise.
@@ -599,9 +604,9 @@ depModel1 r m1 =
           )
         + m1 ^. #alphaX
         + (m1 ^. #betaMa2X)
-        * m
+          * m
         + (m1 ^. #betaStd2X)
-        * (s - 1)
+          * (s - 1)
 
 -- | A rough Median.
 -- The average absolute value of the stat is used to callibrate estimate drift towards the median
