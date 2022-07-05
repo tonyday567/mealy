@@ -44,10 +44,8 @@ library
     , adjunctions        ^>=4.4
     , base               >=4.13   && <5
     , containers         ^>=0.6.2
-    , matrix             ^>=0.3.6
     , mwc-probability    ^>=2.3.1
     , numhask            ^>=0.10
-    , numhask-array      ^>=0.10
     , optics-core        ^>=0.4
     , primitive          ^>=0.7.2
     , profunctors        ^>=5.6.2

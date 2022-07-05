@@ -1,14 +1,11 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -49,46 +46,30 @@ module Data.Mealy
     beta1,
     alpha1,
     reg1,
-    beta,
-    alpha,
-    reg,
     asum,
     aconst,
     last,
     maybeLast,
     delay1,
     delay,
-    depState,
-    Model1 (..),
-    zeroModel1,
-    depModel1,
 
     -- * median
     Medianer (..),
     onlineL1,
-    onlineL1',
     maL1,
-    absmaL1,
-    inverse,
     window,
   )
 where
 
 import Control.Category
 import Control.Exception
-import Data.Functor.Rep
 import Data.List (scanl')
-import qualified Data.Matrix as M
 import Data.Profunctor
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import Data.Typeable (Typeable)
-import GHC.TypeLits
-import qualified NumHask.Array.Fixed as F
-import NumHask.Array.Shape (HasShape)
 import NumHask.Prelude hiding (L1, asum, fold, id, last, (.))
-import Optics.Core
 
 -- $setup
 --
@@ -153,7 +134,7 @@ instance Functor (Mealy a) where
   fmap f (Mealy z h k) = Mealy z h (f . k)
 
 instance Applicative (Mealy a) where
-  pure x = Mealy (\_ -> ()) (\() _ -> ()) (\() -> x)
+  pure x = Mealy (const ()) (\() _ -> ()) (\() -> x)
   Mealy zf hf kf <*> Mealy za ha ka =
     Mealy
       (\a -> Pair' (zf a) (za a))
@@ -392,91 +373,6 @@ alpha1 m = (\x b y -> y - b * x) <$> lmap fst m <*> beta1 m <*> lmap snd m
 reg1 :: (ExpField a) => Mealy a a -> Mealy (a, a) (a, a)
 reg1 m = (,) <$> alpha1 m <*> beta1 m
 
-data RegressionState (n :: Nat) a = RegressionState
-  { _xx :: F.Array '[n, n] a,
-    _x :: F.Array '[n] a,
-    _xy :: F.Array '[n] a,
-    _y :: a
-  }
-  deriving (Functor)
-
--- | multiple regression
---
--- \[
--- \begin{align}
--- {\hat  {{\mathbf  {B}}}}=({\mathbf  {X}}^{{{\rm {T}}}}{\mathbf  {X}})^{{ -1}}{\mathbf  {X}}^{{{\rm {T}}}}{\mathbf  {Y}}
--- \end{align}
--- \]
---
--- \[
--- \begin{align}
--- {\mathbf  {X}}={\begin{bmatrix}{\mathbf  {x}}_{1}^{{{\rm {T}}}}\\{\mathbf  {x}}_{2}^{{{\rm {T}}}}\\\vdots \\{\mathbf  {x}}_{n}^{{{\rm {T}}}}\end{bmatrix}}={\begin{bmatrix}x_{{1,1}}&\cdots &x_{{1,k}}\\x_{{2,1}}&\cdots &x_{{2,k}}\\\vdots &\ddots &\vdots \\x_{{n,1}}&\cdots &x_{{n,k}}\end{bmatrix}}
--- \end{align}
--- \]
---
--- > let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
--- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
--- > fold (beta 0.99) zs
--- [0.4982692361226971, 1.038192474255091]
-beta :: (Field a, KnownNat n, Fractional a, Eq a) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a)
-beta r = M inject step extract
-  where
-    -- extract :: Averager (RegressionState n a) a -> (F.Array '[n] a)
-    extract (A (RegressionState xx x xy y) c) =
-      (\a b -> inverse a `F.mult` b)
-        ((one / c) .* (xx - F.expand (*) x x))
-        ((xy - (y .* x)) *. (one / c))
-    step x (xs, y) = rsOnline r x (inject (xs, y))
-    -- inject :: (F.Array '[n] a, a) -> Averager (RegressionState n a) a
-    inject (xs, y) =
-      A (RegressionState (F.expand (*) xs xs) xs (y .* xs) y) one
-{-# INLINEABLE beta #-}
-
-toMatrix :: (KnownNat n, KnownNat m) => F.Array [m, n] a -> M.Matrix a
-toMatrix a = M.matrix m n (index a . (\(i, j) -> [i, j]))
-  where
-    (m : n : _) = F.shape a
-
-fromMatrix :: (KnownNat n, KnownNat m) => M.Matrix a -> F.Array [m, n] a
-fromMatrix = fromList . M.toList
-
-data MatrixException = MatrixException
-  deriving (Show)
-
-instance Exception MatrixException
-
--- | The inverse of a square matrix.
-inverse :: (KnownNat n, Fractional a, Eq a) => F.Array [n, n] a -> F.Array [n, n] a
-inverse = either (const $ throw MatrixException) fromMatrix . M.inverse . toMatrix
-
-rsOnline :: (Field a, KnownNat n) => a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a
-rsOnline r (A (RegressionState xx x xy y) c) (A (RegressionState xx' x' xy' y') c') =
-  A (RegressionState (liftR2 d xx xx') (liftR2 d x x') (liftR2 d xy xy') (d y y')) (d c c')
-  where
-    d s s' = r * s + s'
-
--- | alpha in a multiple regression
-alpha :: (ExpField a, KnownNat n, Fractional a, Eq a) => a -> Mealy (F.Array '[n] a, a) a
-alpha r = (\xs b y -> y - sum (liftR2 (*) b xs)) <$> lmap fst (arrayify $ ma r) <*> beta r <*> lmap snd (ma r)
-{-# INLINEABLE alpha #-}
-
-arrayify :: (HasShape s) => Mealy a b -> Mealy (F.Array s a) (F.Array s b)
-arrayify (M sExtract sStep sInject) = M extract step inject
-  where
-    extract = fmap sExtract
-    step = liftR2 sStep
-    inject = fmap sInject
-
--- | multiple regression
---
--- > let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
--- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
--- > fold (reg 0.99) zs
--- ([0.4982692361226971, 1.038192474255091],2.087160803386695e-3)
-reg :: (ExpField a, KnownNat n, Fractional a, Eq a) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a, a)
-reg r = (,) <$> beta r <*> alpha r
-{-# INLINEABLE reg #-}
-
 -- | accumulated sum
 asum :: (Additive a) => Mealy a a
 asum = M id (+) id
@@ -525,89 +421,6 @@ delay x0 = M inject step extract
     step Seq.Empty _ = throw (MealyError "empty seq")
     step (_ Seq.:<| xs) a = xs Seq.|> a
 
--- | Add a state dependency to a series.
---
--- Typical regression analytics tend to assume that moments of a distributional assumption are unconditional with respect to prior instantiations of the stochastics being studied.
---
--- For time series analytics, a major preoccupation is estimation of the current moments given what has happened in the past.
---
--- IID:
---
--- \[
--- \begin{align}
--- x_{t+1} & = alpha_t^x + s_{t+1}\\
--- s_{t+1} & = alpha_t^s * N(0,1)
--- \end{align}
--- \]
---
--- Example: including a linear dependency on moving average history:
---
--- \[
--- \begin{align}
--- x_{t+1} & = (alpha_t^x + beta_t^{x->x} * ma_t^x) + s_{t+1}\\
--- s_{t+1} & = alpha_t^s * N(0,1)
--- \end{align}
--- \]
---
--- >>> let xs' = scan (depState (\a m -> a + 0.1 * m) (ma 0.99)) xs0
--- >>> let ma' = scan ((ma (1 - 0.01)) >>> delay [0]) xs'
--- >>> let xsb = fold (beta1 (ma (1 - 0.001))) $ drop 1 $ zip ma' xs'
--- >>> -- beta measurement if beta of ma was, in reality, zero.
--- >>> let xsb0 = fold (beta1 (ma (1 - 0.001))) $ drop 1 $ zip ma' xs0
--- >>> xsb - xsb0
--- 0.10000000000000009
-depState :: (a -> b -> a) -> Mealy a b -> Mealy a a
-depState f (M sInject sStep sExtract) = M inject step extract
-  where
-    inject a = (a, sInject a)
-    step (_, x) a = let a' = f a (sExtract x) in (a', sStep x a')
-    extract (a, _) = a
-
--- | a linear model of state dependencies for the first two moments
---
--- \[
--- \begin{align}
--- x_{t+1} & = (alpha_t^x + beta_t^{x->x} * ma_t^x + beta_t^{s->x} * std_t^x) + s_{t+1}\\
--- s_{t+1} & = (alpha_t^s + beta_t^{x->s} * ma_t^x + beta_t^{s->s} * std_t^x) * N(0,1)
--- \end{align}
--- \]
-data Model1 = Model1
-  { alphaX :: Double,
-    alphaS :: Double,
-    betaMa2X :: Double,
-    betaMa2S :: Double,
-    betaStd2X :: Double,
-    betaStd2S :: Double
-  }
-  deriving (Eq, Show, Generic)
-
--- | zeroised Model1
-zeroModel1 :: Model1
-zeroModel1 = Model1 0 0 0 0 0 0
-
--- | Apply a model1 relationship using a single decay factor.
---
--- >>> :set -XOverloadedLabels
--- >>> import Optics.Core
--- >>> fold (depModel1 0.01 (zeroModel1 & #betaMa2X .~ 0.1)) xs0
--- -0.4591515493154126
-depModel1 :: Double -> Model1 -> Mealy Double Double
-depModel1 r m1 =
-  depState fX st
-  where
-    st = (,) <$> ma (1 - r) <*> std (1 - r)
-    fX a (m, s) =
-      a
-        * ( (1 + m1 ^. #alphaS)
-              + (m1 ^. #betaMa2S) * m
-              + (m1 ^. #betaStd2S) * (s - 1)
-          )
-        + m1 ^. #alphaX
-        + (m1 ^. #betaMa2X)
-          * m
-        + (m1 ^. #betaStd2X)
-          * (s - 1)
-
 -- | A rough Median.
 -- The average absolute value of the stat is used to callibrate estimate drift towards the median
 data Medianer a b = Medianer
@@ -617,9 +430,9 @@ data Medianer a b = Medianer
   }
 
 -- | onlineL1' takes a function and turns it into a `Mealy` where the step is an incremental update of an (isomorphic) median statistic.
-onlineL1' ::
-  (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a (b, b)
-onlineL1' i d f g = M inject step extract
+onlineL1 ::
+  (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a b
+onlineL1 i d f g = snd <$> M inject step extract
   where
     inject a = let s = abs (f a) in Medianer s one (i * s)
     step (Medianer s c m) a =
@@ -637,20 +450,7 @@ onlineL1' i d f g = M inject step extract
       | f a > m = one
       | f a < m = negate one
       | otherwise = zero
-{-# INLINEABLE onlineL1' #-}
-
--- | onlineL1 takes a function and turns it into a `Control.Foldl.Fold` where the step is an incremental update of an (isomorphic) median statistic.
-onlineL1 :: (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a b
-onlineL1 i d f g = snd <$> onlineL1' i d f g
 {-# INLINEABLE onlineL1 #-}
-
--- $setup
---
--- >>> import qualified Control.Foldl as L
--- >>> let n = 100
--- >>> let inc = 0.1
--- >>> let d = 0
--- >>> let r = 0.9
 
 -- | moving median
 -- > L.fold (maL1 inc d r) [1..n]
@@ -658,11 +458,6 @@ onlineL1 i d f g = snd <$> onlineL1' i d f g
 maL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> Mealy a a
 maL1 i d r = onlineL1 i d id (* r)
 {-# INLINEABLE maL1 #-}
-
--- | moving absolute deviation
-absmaL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> Mealy a a
-absmaL1 i d r = fst <$> onlineL1' i d id (* r)
-{-# INLINEABLE absmaL1 #-}
 
 -- | a window of a's
 window :: Int -> Mealy a [a]
