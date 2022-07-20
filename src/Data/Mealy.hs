@@ -117,7 +117,7 @@ instance Exception MealyError
 --
 -- __inject__ kicks off state on the initial element of the Foldable, but is otherwise be independent of __step__.
 --
--- > scan (M e s i) (x : xs) = e <$> scanl' s (i x) xs
+-- > scan (M i s e) (x : xs) = e <$> scanl' s (i x) xs
 data Mealy a b = forall c. Mealy (a -> c) (c -> a -> c) (c -> b)
 
 -- | Strict Pair
