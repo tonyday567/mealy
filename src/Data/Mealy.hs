@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -46,6 +47,9 @@ module Data.Mealy
     beta1,
     alpha1,
     reg1,
+    beta,
+    alpha,
+    reg,
     asum,
     aconst,
     last,
@@ -70,6 +74,9 @@ import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import NumHask.Prelude hiding (L1, asum, fold, id, last, (.))
+import NumHask.Array as F
+import GHC.TypeLits
+import Data.Functor.Rep
 
 -- $setup
 --
@@ -372,6 +379,74 @@ alpha1 m = (\x b y -> y - b * x) <$> lmap fst m <*> beta1 m <*> lmap snd m
 -- (1.3680496627365146e-2,0.4997473212944953)
 reg1 :: (ExpField a) => Mealy a a -> Mealy (a, a) (a, a)
 reg1 m = (,) <$> alpha1 m <*> beta1 m
+
+data RegressionState (n :: Nat) a = RegressionState
+  { _xx :: F.Array '[n, n] a,
+    _x :: F.Array '[n] a,
+    _xy :: F.Array '[n] a,
+    _y :: a
+  }
+  deriving (Functor)
+
+-- | multiple regression
+--
+-- \[
+-- \begin{align}
+-- {\hat  {{\mathbf  {B}}}}=({\mathbf  {X}}^{{{\rm {T}}}}{\mathbf  {X}})^{{ -1}}{\mathbf  {X}}^{{{\rm {T}}}}{\mathbf  {Y}}
+-- \end{align}
+-- \]
+--
+-- \[
+-- \begin{align}
+-- {\mathbf  {X}}={\begin{bmatrix}{\mathbf  {x}}_{1}^{{{\rm {T}}}}\\{\mathbf  {x}}_{2}^{{{\rm {T}}}}\\\vdots \\{\mathbf  {x}}_{n}^{{{\rm {T}}}}\end{bmatrix}}={\begin{bmatrix}x_{{1,1}}&\cdots &x_{{1,k}}\\x_{{2,1}}&\cdots &x_{{2,k}}\\\vdots &\ddots &\vdots \\x_{{n,1}}&\cdots &x_{{n,k}}\end{bmatrix}}
+-- \end{align}
+-- \]
+--
+-- > let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
+-- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
+-- > fold (beta 0.99) zs
+-- [0.4982692361226971, 1.038192474255091]
+beta :: (ExpField a, KnownNat n, Eq a) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a)
+beta r = M inject step extract
+  where
+    -- extract :: Averager (RegressionState n a) a -> (F.Array '[n] a)
+    extract (A (RegressionState xx x xy y) c) =
+      (\a b -> recip a `F.mult` b)
+        ((one / c) .* (xx - F.expand (*) x x))
+        ((xy - (y .* x)) *. (one / c))
+    step x (xs, y) = rsOnline r x (inject (xs, y))
+    -- inject :: (F.Array '[n] a, a) -> Averager (RegressionState n a) a
+    inject (xs, y) =
+      A (RegressionState (F.expand (*) xs xs) xs (y .* xs) y) one
+{-# INLINEABLE beta #-}
+
+rsOnline :: (Field a, KnownNat n) => a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a
+rsOnline r (A (RegressionState xx x xy y) c) (A (RegressionState xx' x' xy' y') c') =
+  A (RegressionState (liftR2 d xx xx') (liftR2 d x x') (liftR2 d xy xy') (d y y')) (d c c')
+  where
+    d s s' = r * s + s'
+
+-- | alpha in a multiple regression
+alpha :: (ExpField a, KnownNat n, Eq a) => a -> Mealy (F.Array '[n] a, a) a
+alpha r = (\xs b y -> y - sum (liftR2 (*) b xs)) <$> lmap fst (arrayify $ ma r) <*> beta r <*> lmap snd (ma r)
+{-# INLINEABLE alpha #-}
+
+arrayify :: (HasShape s) => Mealy a b -> Mealy (F.Array s a) (F.Array s b)
+arrayify (M sExtract sStep sInject) = M extract step inject
+  where
+    extract = fmap sExtract
+    step = liftR2 sStep
+    inject = fmap sInject
+
+-- | multiple regression
+--
+-- > let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
+-- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
+-- > fold (reg 0.99) zs
+-- ([0.4982692361226971, 1.038192474255091],2.087160803386695e-3)
+reg :: (ExpField a, KnownNat n, Eq a) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a, a)
+reg r = (,) <$> beta r <*> alpha r
+{-# INLINEABLE reg #-}
 
 -- | accumulated sum
 asum :: (Additive a) => Mealy a a
