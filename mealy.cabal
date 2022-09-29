@@ -21,7 +21,7 @@ description:
 
 category:      folding
 build-type:    Simple
-tested-with:   GHC ==8.8.4 || ==8.10.7 || ==9.2.1
+tested-with:   GHC ==8.8.4 || ==8.10.7 || ==9.2.4 || ==9.4.2
 
 source-repository head
   type:     git

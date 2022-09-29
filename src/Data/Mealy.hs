@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -56,27 +56,27 @@ module Data.Mealy
     maybeLast,
     delay1,
     delay,
+    window,
 
     -- * median
     Medianer (..),
     onlineL1,
     maL1,
-    window,
   )
 where
 
 import Control.Category
 import Control.Exception
+import Data.Functor.Rep
 import Data.List (scanl')
 import Data.Profunctor
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import Data.Typeable (Typeable)
-import NumHask.Prelude hiding (L1, asum, fold, id, last, (.))
-import NumHask.Array as F
 import GHC.TypeLits
-import Data.Functor.Rep
+import NumHask.Array as F
+import NumHask.Prelude hiding (L1, asum, fold, id, last, (.))
 
 -- $setup
 --
@@ -496,6 +496,11 @@ delay x0 = M inject step extract
     step Seq.Empty _ = throw (MealyError "empty seq")
     step (_ Seq.:<| xs) a = xs Seq.|> a
 
+-- | a moving window of a's, most recent at the front of the sequence
+window :: Int -> Mealy a (Seq.Seq a)
+window n = M Seq.singleton (\xs x -> Seq.take n (x Seq.<| xs)) id
+{-# INLINEABLE window #-}
+
 -- | A rough Median.
 -- The average absolute value of the stat is used to callibrate estimate drift towards the median
 data Medianer a b = Medianer
@@ -533,8 +538,3 @@ onlineL1 i d f g = snd <$> M inject step extract
 maL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> Mealy a a
 maL1 i d r = onlineL1 i d id (* r)
 {-# INLINEABLE maL1 #-}
-
--- | a window of a's
-window :: Int -> Mealy a [a]
-window n = M Seq.singleton (\xs x -> Seq.take n (x Seq.<| xs)) (reverse . toList)
-{-# INLINEABLE window #-}
