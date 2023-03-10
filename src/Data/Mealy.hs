@@ -295,7 +295,7 @@ sqma r = online (\x -> x * x) (* r)
 --
 -- >>> fold (std 1) xs0
 -- 1.0126438036262801
-std :: (Divisive a, ExpField a) => a -> Mealy a a
+std :: (ExpField a) => a -> Mealy a a
 std r = (\s ss -> sqrt (ss - s ** (one + one))) <$> ma r <*> sqma r
 {-# INLINEABLE std #-}
 
