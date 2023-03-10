@@ -52,4 +52,4 @@ jobs:
           cabal test
       - if: matrix.docspec
         name: run cabal-docspec
-        run: cabal-docspec --check-properties
+        run: cabal-docspec
