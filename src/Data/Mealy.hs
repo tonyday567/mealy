@@ -77,6 +77,7 @@ import Data.Typeable (Typeable)
 import GHC.TypeLits
 import NumHask.Array as F
 import NumHask.Prelude hiding (L1, asum, fold, id, last, (.))
+import Data.Bifunctor
 
 -- $setup
 --
@@ -159,6 +160,13 @@ instance Profunctor Mealy where
   dimap f g (Mealy z h k) = Mealy (z . f) (\a -> h a . f) (g . k)
   lmap f (Mealy z h k) = Mealy (z . f) (\a -> h a . f) k
   rmap g (Mealy z h k) = Mealy z h (g . k)
+
+instance Strong Mealy where
+  first' (M i s e) = M (first i) (\(cl,_) (al,ar) -> (s cl al, ar)) (first e)
+
+-- The right type for Choice would be something like:
+--
+-- left' :: p a b -> p (Either a c) (These b c)
 
 -- | Convenience pattern for a 'Mealy'.
 --
