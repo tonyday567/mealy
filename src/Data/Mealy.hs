@@ -67,6 +67,7 @@ where
 
 import Control.Category
 import Control.Exception
+import Data.Bifunctor
 import Data.Functor.Rep
 import Data.List (scanl')
 import Data.Profunctor
@@ -77,7 +78,6 @@ import Data.Typeable (Typeable)
 import GHC.TypeLits
 import NumHask.Array as F
 import NumHask.Prelude hiding (L1, asum, fold, id, last, (.))
-import Data.Bifunctor
 
 -- $setup
 --
@@ -162,7 +162,7 @@ instance Profunctor Mealy where
   rmap g (Mealy z h k) = Mealy z h (g . k)
 
 instance Strong Mealy where
-  first' (M i s e) = M (first i) (\(cl,_) (al,ar) -> (s cl al, ar)) (first e)
+  first' (M i s e) = M (first i) (\(cl, _) (al, ar) -> (s cl al, ar)) (first e)
 
 -- The right type for Choice would be something like:
 --
