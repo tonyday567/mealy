@@ -1,2 +1,4 @@
 packages:
   mealy.cabal
+  ../numhask/numhask.cabal
+  ../numhask-array/numhask-array.cabal

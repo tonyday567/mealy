@@ -273,7 +273,7 @@ ma r = online id (* r)
 --
 -- >>> fold (absma 1) xs0
 -- 0.8075705557429647
-absma :: (Divisive a, Signed a) => a -> Mealy a a
+absma :: (Divisive a, Absolute a) => a -> Mealy a a
 absma r = online abs (* r)
 {-# INLINEABLE absma #-}
 
@@ -519,7 +519,7 @@ data Medianer a b = Medianer
 
 -- | onlineL1' takes a function and turns it into a `Mealy` where the step is an incremental update of an (isomorphic) median statistic.
 onlineL1 ::
-  (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a b
+  (Ord b, Field b, Absolute b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a b
 onlineL1 i d f g = snd <$> M inject step extract
   where
     inject a = let s = abs (f a) in Medianer s one (i * s)
@@ -543,6 +543,6 @@ onlineL1 i d f g = snd <$> M inject step extract
 -- | moving median
 -- > L.fold (maL1 inc d r) [1..n]
 -- 93.92822312742108
-maL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> Mealy a a
+maL1 :: (Ord a, Field a, Absolute a) => a -> a -> a -> Mealy a a
 maL1 i d r = onlineL1 i d id (* r)
 {-# INLINEABLE maL1 #-}
