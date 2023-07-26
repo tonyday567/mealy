@@ -1,10 +1,4 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -fno-warn-type-defaults #-}
 
 -- | simulation to support testing of Mealy's using mwc-probability
 module Data.Mealy.Simulate

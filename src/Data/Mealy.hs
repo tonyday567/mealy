@@ -1,25 +1,7 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 -- | Online statistics for ordered data (such as time-series data), modelled as [mealy machines](https://en.wikipedia.org/wiki/Mealy_machine)
 module Data.Mealy
@@ -72,7 +54,7 @@ import Data.Functor.Rep
 import Data.List (scanl')
 import Data.Profunctor
 import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
+import Data.Sequence qualified as Seq
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.TypeLits
@@ -176,6 +158,7 @@ pattern M i s e = Mealy i s e
 
 {-# COMPLETE M #-}
 
+-- | Create a Mealy from a (pure) function
 dipure :: (a -> a -> a) -> Mealy a a
 dipure f = M id f id
 
@@ -273,7 +256,7 @@ ma r = online id (* r)
 --
 -- >>> fold (absma 1) xs0
 -- 0.8075705557429647
-absma :: (Divisive a, Signed a) => a -> Mealy a a
+absma :: (Divisive a, Absolute a) => a -> Mealy a a
 absma r = online abs (* r)
 {-# INLINEABLE absma #-}
 
@@ -420,12 +403,12 @@ beta r = M inject step extract
     -- extract :: Averager (RegressionState n a) a -> (F.Array '[n] a)
     extract (A (RegressionState xx x xy y) c) =
       (\a b -> recip a `F.mult` b)
-        ((one / c) .* (xx - F.expand (*) x x))
-        ((xy - (y .* x)) *. (one / c))
+        ((one / c) *| (xx - F.expand (*) x x))
+        ((xy - (y *| x)) |* (one / c))
     step x (xs, y) = rsOnline r x (inject (xs, y))
     -- inject :: (F.Array '[n] a, a) -> Averager (RegressionState n a) a
     inject (xs, y) =
-      A (RegressionState (F.expand (*) xs xs) xs (y .* xs) y) one
+      A (RegressionState (F.expand (*) xs xs) xs (y *| xs) y) one
 {-# INLINEABLE beta #-}
 
 rsOnline :: (Field a, KnownNat n) => a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a
@@ -519,7 +502,7 @@ data Medianer a b = Medianer
 
 -- | onlineL1' takes a function and turns it into a `Mealy` where the step is an incremental update of an (isomorphic) median statistic.
 onlineL1 ::
-  (Ord b, Field b, Signed b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a b
+  (Ord b, Field b, Absolute b) => b -> b -> (a -> b) -> (b -> b) -> Mealy a b
 onlineL1 i d f g = snd <$> M inject step extract
   where
     inject a = let s = abs (f a) in Medianer s one (i * s)
@@ -543,6 +526,6 @@ onlineL1 i d f g = snd <$> M inject step extract
 -- | moving median
 -- > L.fold (maL1 inc d r) [1..n]
 -- 93.92822312742108
-maL1 :: (Ord a, Field a, Signed a) => a -> a -> a -> Mealy a a
+maL1 :: (Ord a, Field a, Absolute a) => a -> a -> a -> Mealy a a
 maL1 i d r = onlineL1 i d id (* r)
 {-# INLINEABLE maL1 #-}
