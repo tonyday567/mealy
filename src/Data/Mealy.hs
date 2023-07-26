@@ -1,25 +1,7 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 -- | Online statistics for ordered data (such as time-series data), modelled as [mealy machines](https://en.wikipedia.org/wiki/Mealy_machine)
 module Data.Mealy
@@ -72,7 +54,7 @@ import Data.Functor.Rep
 import Data.List (scanl')
 import Data.Profunctor
 import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
+import Data.Sequence qualified as Seq
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.TypeLits
@@ -176,6 +158,7 @@ pattern M i s e = Mealy i s e
 
 {-# COMPLETE M #-}
 
+-- | Create a Mealy from a (pure) function
 dipure :: (a -> a -> a) -> Mealy a a
 dipure f = M id f id
 
@@ -420,12 +403,12 @@ beta r = M inject step extract
     -- extract :: Averager (RegressionState n a) a -> (F.Array '[n] a)
     extract (A (RegressionState xx x xy y) c) =
       (\a b -> recip a `F.mult` b)
-        ((one / c) .* (xx - F.expand (*) x x))
-        ((xy - (y .* x)) *. (one / c))
+        ((one / c) *| (xx - F.expand (*) x x))
+        ((xy - (y *| x)) |* (one / c))
     step x (xs, y) = rsOnline r x (inject (xs, y))
     -- inject :: (F.Array '[n] a, a) -> Averager (RegressionState n a) a
     inject (xs, y) =
-      A (RegressionState (F.expand (*) xs xs) xs (y .* xs) y) one
+      A (RegressionState (F.expand (*) xs xs) xs (y *| xs) y) one
 {-# INLINEABLE beta #-}
 
 rsOnline :: (Field a, KnownNat n) => a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a -> Averager (RegressionState n a) a

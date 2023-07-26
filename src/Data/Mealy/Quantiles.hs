@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE StrictData #-}
 
 -- | Mealy quantile statistics.
 module Data.Mealy.Quantiles
@@ -16,8 +15,8 @@ import Data.Ord
 import Data.TDigest hiding (median)
 import Data.TDigest.Internal
 import Data.TDigest.Tree.Internal (TDigest (..), absMaxSize, emptyTDigest, insertCentroid, relMaxSize, size, toMVector)
-import qualified Data.Vector.Algorithms.Heap as VHeap
-import qualified Data.Vector.Unboxed as VU
+import Data.Vector.Algorithms.Heap qualified as VHeap
+import Data.Vector.Unboxed qualified as VU
 import NumHask.Prelude hiding (fold)
 
 data OnlineTDigest = OnlineTDigest
