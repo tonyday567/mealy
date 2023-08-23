@@ -40,6 +40,12 @@ module Data.Mealy
     delay1,
     delay,
     window,
+    diff,
+    gdiff,
+    same,
+    countM,
+    sumM,
+    listify,
 
     -- * median
     Medianer (..),
@@ -53,6 +59,7 @@ import Control.Exception
 import Data.Bifunctor
 import Data.Functor.Rep
 import Data.List (scanl')
+import Data.Map qualified as Map
 import Data.Profunctor
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
@@ -60,7 +67,7 @@ import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.TypeLits
 import NumHask.Array as F
-import NumHask.Prelude hiding (L1, asum, fold, id, last, (.))
+import NumHask.Prelude hiding (asum, diff, fold, id, last, (.))
 
 -- $setup
 --
@@ -94,11 +101,11 @@ newtype MealyError = MealyError {mealyErrorMessage :: Text}
 
 instance Exception MealyError
 
--- | A 'Mealy' is a triple of functions
+-- | A 'Mealy' a b is a triple of functions
 --
--- * (a -> b) __inject__ Convert an input into the state type.
--- * (b -> a -> b) __step__ Update state given prior state and (new) input.
--- * (c -> b) __extract__ Convert state to the output type.
+-- * (a -> s) __inject__ Convert an input into the state type.
+-- * (s -> a -> s) __step__ Update state given prior state and (new) input.
+-- * (s -> b) __extract__ Convert state to the output type.
 --
 -- By adopting this order, a Mealy sum looks like:
 --
@@ -106,7 +113,7 @@ instance Exception MealyError
 --
 -- where the first id is the initial injection to a contravariant position, and the second id is the covariant extraction.
 --
--- __inject__ kicks off state on the initial element of the Foldable, but is otherwise be independent of __step__.
+-- __inject__ kicks off state on the initial element of the Foldable, but is otherwise  independent of __step__.
 --
 -- > scan (M i s e) (x : xs) = e <$> scanl' s (i x) xs
 data Mealy a b = forall c. Mealy (a -> c) (c -> a -> c) (c -> b)
@@ -492,6 +499,34 @@ delay x0 = M inject step extract
 window :: Int -> Mealy a (Seq.Seq a)
 window n = M Seq.singleton (\xs x -> Seq.take n (x Seq.<| xs)) id
 {-# INLINEABLE window #-}
+
+-- | binomial operator applied to last and this value
+diff :: (a -> a -> b) -> Mealy a b
+diff f = f <$> id <*> delay1 undefined
+
+-- | generalised diff function.
+gdiff :: (a -> b) -> (a -> a -> b) -> Mealy a b
+gdiff d0 d = M (\a -> (d0 a, a)) (\(_, a') a -> (d a a', a)) fst
+
+-- | Unchanged since last time.
+same :: (Eq b) => (a -> b) -> Mealy a Bool
+same b = M (\a -> (True, b a)) (\(s, x) a -> (s && b a == x, x)) fst
+
+-- | Count observed values
+countM :: (Ord a) => Mealy a (Map.Map a Int)
+countM = M (`Map.singleton` 1) (\m k -> Map.insertWith (+) k 1 m) id
+
+-- | Sum values of a key-value pair.
+sumM :: (Ord a, Additive b) => Mealy (a, b) (Map.Map a b)
+sumM = M (uncurry Map.singleton) (\m (k, v) -> Map.insertWith (+) k v m) id
+
+-- | Convert a Mealy to a Mealy operating on lists.
+listify :: Mealy a b -> Mealy [a] [b]
+listify (M sExtract sStep sInject) = M extract step inject
+  where
+    extract = fmap sExtract
+    step = zipWith sStep
+    inject = fmap sInject
 
 -- | A rough Median.
 -- The average absolute value of the stat is used to callibrate estimate drift towards the median

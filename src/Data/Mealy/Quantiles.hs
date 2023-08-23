@@ -6,6 +6,7 @@ module Data.Mealy.Quantiles
   ( median,
     quantiles,
     digitize,
+    signalize,
   )
 where
 
@@ -88,7 +89,7 @@ onlineForceCompress (OnlineTDigest t n r) = OnlineTDigest t' 0 r
         VU.unsafeFreeze v
 
 -- | A mealy that computes the running quantile bucket. For example,
--- in a scan, @digitize 0.9 [0,0.5,1]@ returns:
+-- in a scan, @digitize 0.9 [0.5]@ returns:
 --
 -- * 0 if the current value is less than the current mealy median.
 --
@@ -110,3 +111,8 @@ digitize r qs = M inject step extract
                   else 1
             )
               <$> xs
+
+-- | transform an input to a [0,1] signal, via digitalization.
+signalize :: Double -> [Double] -> Mealy Double Double
+signalize r qs' =
+  (\x -> fromIntegral x / fromIntegral (length qs' + 1)) <$> digitize r qs'
