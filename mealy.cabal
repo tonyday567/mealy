@@ -103,14 +103,14 @@ library
     build-depends:
         , adjunctions       >=4.0 && <5
         , base              >=4.7 && <5
-        , containers        >=0.6 && <0.7
-        , mwc-probability   ^>=2.3.1
+        , containers        >=0.6 && <0.8
+        , mwc-probability   >=2.3.1 && <2.4
         , numhask           >=0.10 && <0.12
         , numhask-array     >=0.10 && <0.12
         , primitive         >=0.7.2 && <0.9
         , profunctors       >=5.6.2 && <5.7
         , tdigest           >=0.2.1 && <0.4
-        , text              >=1.2 && <2.1
+        , text              >=1.2 && <2.2
         , vector            >=0.12.3 && <0.14
         , vector-algorithms >=0.8.0 && <0.10
     exposed-modules:
