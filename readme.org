@@ -18,7 +18,6 @@ as current state within a mealy context.
 Usage is to supply a decay function representing the relative weights of recent values versus older ones, in the manner of exponentially-weighted averages. The library attempts to be polymorphic in the statistic which can be combined in applicative style.
 
 #+begin_src haskell :results output
-:set prompt "> "
 import Prelude
 import Data.Mealy
 #+end_src
@@ -29,7 +28,6 @@ fold ((,) <$> ma 0.9 <*> std 0.9) [1..100::Double]
 
 #+RESULTS:
 : (91.00265621044142,9.472822805289121)
-
 
 * Reference
 
