@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: mealy
-version: 0.4.4
+version: 0.4.4.1
 license: BSD-3-Clause
 license-file: LICENSE
 copyright: Tony Day (c) 2013
@@ -21,7 +21,7 @@ description:
     (91.00265621044142,9.472822805289121)
 
 build-type: Simple
-tested-with: GHC == 8.10.7 || ==9.2.8 || ==9.4.5 || ==9.6.2
+tested-with: GHC == 8.10 || ==9.2 || ==9.4 || ==9.6 || ==9.8
 extra-doc-files:
     ChangeLog.md
     readme.org
@@ -101,13 +101,13 @@ library
     import: ghc2021-stanza
     hs-source-dirs: src
     build-depends:
-        , adjunctions       >=4.0 && <5
+        , adjunctions       >=4.0 && <4.5
         , base              >=4.7 && <5
         , containers        >=0.6 && <0.8
         , mwc-probability   >=2.3.1 && <2.4
-        , numhask           >=0.10 && <0.12
-        , numhask-array     >=0.10 && <0.12
-        , primitive         >=0.7.2 && <0.9
+        , numhask           >=0.11 && <0.12
+        , numhask-array     >=0.11 && <0.12
+        , primitive         >=0.7.2 && <0.10
         , profunctors       >=5.6.2 && <5.7
         , tdigest           >=0.2.1 && <0.4
         , text              >=1.2 && <2.2
