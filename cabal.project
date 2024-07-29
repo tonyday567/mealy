@@ -1,2 +1,6 @@
 packages:
   mealy.cabal
+
+write-ghc-environment-files: always
+
+tests: True

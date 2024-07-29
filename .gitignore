@@ -1,8 +1,8 @@
 /.stack-work/
 /dist-newstyle/
-TAGS
 .DS_Store
-stack.yaml.lock
 /.hie/
 /cabal.project.local*
 /.hkgr/
+/.ghc.environment.*
+/checklist.org
