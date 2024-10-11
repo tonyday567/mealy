@@ -66,7 +66,9 @@ import Data.Sequence qualified as Seq
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.TypeLits
-import NumHask.Array as F
+import Harpie.Fixed qualified as F
+import Harpie.Shape qualified as S
+import Harpie.NumHask qualified as N
 import NumHask.Prelude hiding (asum, diff, fold, id, last, (.))
 
 -- $setup
@@ -410,7 +412,7 @@ beta r = M inject step extract
   where
     -- extract :: Averager (RegressionState n a) a -> (F.Array '[n] a)
     extract (A (RegressionState xx x xy y) c) =
-      (\a b -> recip a `F.mult` b)
+      (\a b -> recip a `N.mult` b)
         ((one / c) *| (xx - F.expand (*) x x))
         ((xy - (y *| x)) |* (one / c))
     step x (xs, y) = rsOnline r x (inject (xs, y))
@@ -430,7 +432,7 @@ alpha :: (ExpField a, KnownNat n, Eq a) => a -> Mealy (F.Array '[n] a, a) a
 alpha r = (\xs b y -> y - sum (liftR2 (*) b xs)) <$> lmap fst (arrayify $ ma r) <*> beta r <*> lmap snd (ma r)
 {-# INLINEABLE alpha #-}
 
-arrayify :: (HasShape s) => Mealy a b -> Mealy (F.Array s a) (F.Array s b)
+arrayify :: (S.KnownNats s) => Mealy a b -> Mealy (F.Array s a) (F.Array s b)
 arrayify (M sExtract sStep sInject) = M extract step inject
   where
     extract = fmap sExtract
