@@ -67,8 +67,8 @@ import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.TypeLits
 import Harpie.Fixed qualified as F
-import Harpie.Shape qualified as S
 import Harpie.NumHask qualified as N
+import Harpie.Shape qualified as S
 import NumHask.Prelude hiding (asum, diff, fold, id, last, (.))
 
 -- $setup

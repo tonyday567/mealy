@@ -10,8 +10,7 @@ A 'Mealy' is a triple of functions
 
 A sum, for example, looks like ~M id (+) id~ where the first id is the initial injection and the second id is the covariant extraction.
 
-This library provides support for computing statistics (such as an average or a standard deviation)
-as current state within a mealy context.
+This library provides support for computing statistics (such as an average or a standard deviation) as current state within a mealy context.
 
 * Usage
 
