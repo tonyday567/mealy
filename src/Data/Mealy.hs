@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
--- | Online statistics for ordered data (such as time-series data), modelled as [mealy machines](https://en.wikipedia.org/wiki/Mealy_machine)
+-- | A 'Mealy' is a polymorphic statistic reimagined as a [mealy machine](https://en.wikipedia.org/wiki/Mealy_machine) processing and summarising data with some form of order (such as time-series data), where recent data is less relevant than old data.
 module Data.Mealy
   ( -- * Types
     Mealy (..),
@@ -77,6 +77,7 @@ import NumHask.Prelude hiding (asum, diff, fold, id, last, (.))
 -- >>> import Control.Category ((>>>))
 -- >>> import Data.List
 -- >>> import Data.Mealy.Simulate
+-- >>> import Harpie.Fixed qualified as F
 -- >>> g <- create
 -- >>> xs0 <- rvs g 10000
 -- >>> xs1 <- rvs g 10000
@@ -105,11 +106,11 @@ instance Exception MealyError
 
 -- | A 'Mealy' a b is a triple of functions
 --
--- * (a -> s) __inject__ Convert an input into the state type.
+-- * (a -> s) __inject__ Convert an input into an internal state type.
 -- * (s -> a -> s) __step__ Update state given prior state and (new) input.
 -- * (s -> b) __extract__ Convert state to the output type.
 --
--- By adopting this order, a Mealy sum looks like:
+-- By adopting this order, a sum, for example, looks like:
 --
 -- > M id (+) id
 --
@@ -118,7 +119,7 @@ instance Exception MealyError
 -- __inject__ kicks off state on the initial element of the Foldable, but is otherwise  independent of __step__.
 --
 -- > scan (M i s e) (x : xs) = e <$> scanl' s (i x) xs
-data Mealy a b = forall c. Mealy (a -> c) (c -> a -> c) (c -> b)
+data Mealy a b = forall s. Mealy (a -> s) (s -> a -> s) (s -> b)
 
 -- | Strict Pair
 data Pair' a b = Pair' !a !b deriving (Eq, Ord, Show, Read)
@@ -403,10 +404,10 @@ data RegressionState (n :: Nat) a = RegressionState
 -- \end{align}
 -- \]
 --
--- > let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
--- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
--- > fold (beta 0.99) zs
--- [0.4982692361226971, 1.038192474255091]
+-- >>> let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
+-- >>> let zs = zip (zipWith (\x y -> F.array @'[2] [x,y]) xs1 xs2) ys
+-- >>> fold (beta 0.99) zs
+-- [0.6228820021456606,0.8461936860075405]
 beta :: (ExpField a, KnownNat n, Eq a) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a)
 beta r = M inject step extract
   where
@@ -441,10 +442,10 @@ arrayify (M sExtract sStep sInject) = M extract step inject
 
 -- | multiple regression
 --
--- > let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
--- > let zs = zip (zipWith (\x y -> fromList [x,y] :: F.Array '[2] Double) xs1 xs2) ys
--- > fold (reg 0.99) zs
--- ([0.4982692361226971, 1.038192474255091],2.087160803386695e-3)
+-- >>> let ys = zipWith3 (\x y z -> 0.1 * x + 0.5 * y + 1 * z) xs0 xs1 xs2
+-- >>> let zs = zip (zipWith (\x y -> F.array @'[2] [x,y]) xs1 xs2) ys
+-- >>> fold (reg 0.99) zs
+-- ([0.6228820021456606,0.8461936860075405],2.536775201287266e-2)
 reg :: (ExpField a, KnownNat n, Eq a) => a -> Mealy (F.Array '[n] a, a) (F.Array '[n] a, a)
 reg r = (,) <$> beta r <*> alpha r
 {-# INLINEABLE reg #-}
@@ -562,8 +563,6 @@ onlineL1 i d f g = snd <$> M inject step extract
 {-# INLINEABLE onlineL1 #-}
 
 -- | moving median
--- > L.fold (maL1 inc d r) [1..n]
--- 93.92822312742108
 maL1 :: (Ord a, Field a, Absolute a) => a -> a -> a -> Mealy a a
 maL1 i d r = onlineL1 i d id (* r)
 {-# INLINEABLE maL1 #-}

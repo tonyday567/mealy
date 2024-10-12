@@ -11,7 +11,9 @@ homepage: https://github.com/tonyday567/mealy#readme
 bug-reports: https://github.com/tonyday567/mealy/issues
 synopsis: Mealy machines for processing time-series and ordered data.
 description:
-    @mealy@ provides support for computing statistics (such as an average or a standard deviation) as current state. Usage is to supply a decay function representing the relative weights of recent values versus older ones, in the manner of exponentially-weighted averages. The library attempts to be polymorphic in the statistic which can be combined in applicative style.
+
+    @mealy@ reimagines statistics as a [mealy machine](https://en.wikipedia.org/wiki/Mealy_machine) processing data with some form of order such as time-series data. The 'Mealy', with the help of a decay function specifying the relative weights of recent values versus older value, can be treated as a compression or summary of the data stream into 'current state.'
+    Mealies are highly polymorphic, situated at a busy crossroad of theory and practice, and lend themselves to ergonmic, compact and realistic representations of a wide range of online phenomena.
 
     == Usage
 
