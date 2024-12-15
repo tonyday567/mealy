@@ -1,5 +1,6 @@
 packages:
   mealy.cabal
+  ../perf/perf.cabal
 
 write-ghc-environment-files: always
 

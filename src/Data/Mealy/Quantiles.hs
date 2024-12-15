@@ -7,6 +7,11 @@ module Data.Mealy.Quantiles
     quantiles,
     digitize,
     signalize,
+    OnlineTDigest (..),
+    emptyOnlineTDigest,
+    onlineInsert,
+    onlineCompress,
+    onlineForceCompress,
   )
 where
 
@@ -111,6 +116,7 @@ digitize r qs = M inject step extract
                   else 1
             )
               <$> xs
+
 
 -- | transform an input to a [0,1] signal, via digitalization.
 signalize :: Double -> [Double] -> Mealy Double Double
