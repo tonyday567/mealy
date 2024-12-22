@@ -81,3 +81,34 @@ test-suite doctests
         , mealy
     ghc-options: -threaded
     type: exitcode-stdio-1.0
+
+common ghc-options-exe-stanza
+    ghc-options:
+        -fforce-recomp
+        -funbox-strict-fields
+        -rtsopts
+        -threaded
+        -with-rtsopts=-N
+
+executable mealy-perf
+    import: ghc-options-exe-stanza
+    import: ghc-options-stanza
+    import: ghc2021-stanza
+    main-is: mealy-perf.hs
+    hs-source-dirs: test
+    build-depends:
+        , optics-core
+        , base                 >=4.7 && <5
+        , clock                >=0.8 && <0.9
+        , containers           >=0.6 && <0.8
+        , deepseq              >=1.4.4 && <1.6
+        , formatn              >=0.2.1 && <0.4
+        , mtl                  >=2.2.2 && <2.4
+        , optparse-applicative >=0.17 && <0.19
+        , perf
+        , text                 >=1.2 && <2.2
+        , time
+        , mealy
+        , harpie
+        , tdigest
+    ghc-options: -O2

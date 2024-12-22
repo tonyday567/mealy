@@ -7,6 +7,11 @@ module Data.Mealy.Quantiles
     quantiles,
     digitize,
     signalize,
+    OnlineTDigest (..),
+    emptyOnlineTDigest,
+    onlineInsert,
+    onlineCompress,
+    onlineForceCompress,
   )
 where
 
