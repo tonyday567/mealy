@@ -15,12 +15,12 @@ import Data.Map.Strict (Map)
 import Data.Text (Text)
 import Data.TDigest hiding (median)
 import Data.Maybe
+import Control.Monad
 
 data Run = RunStats | RunQuantiles [Double] deriving (Eq, Show)
 
 data AppConfig = AppConfig
   { appReportOptions :: ReportOptions,
-    appLength :: Int,
     appRun :: Run
   }
   deriving (Eq, Show)
@@ -31,23 +31,10 @@ parseRun =
   flag' (RunQuantiles [0.1,0.5,0.9]) (long "quantiles" <> help "run quantiles test") <|>
   pure RunStats
 
--- | Command-line parser for 'ReportOptions'
-parseReportOptions' :: Parser ReportOptions
-parseReportOptions' =
-  ReportOptions
-    <$> option auto (value 10 <> long "runs" <> short 'n' <> help "number of runs to perform")
-    <*> parseClock
-    <*> parseStatD
-    <*> parseMeasure
-    <*> parseGolden
-    <*> parseHeader
-    <*> parseCompareLevels defaultCompareLevels
-
 parseAppConfig :: Parser AppConfig
 parseAppConfig =
   AppConfig
-    <$> parseReportOptions'
-    <*> option auto (value 1000 <> long "length" <> short 'l' <> help "foldable length")
+    <$> parseReportOptions defaultReportOptions
     <*> parseRun
 
 appInfo :: ParserInfo AppConfig
@@ -64,16 +51,16 @@ main = do
   let s = reportStatDType repOptions
   let mt = reportMeasureType repOptions
   let run = appRun o
-  let l = appLength o
+  let l = reportLength repOptions
   gen <- create
   _ <- warmup 100
   case run of
     RunStats -> do
       xs <- rvs gen l
-      reportMainWith repOptions (intercalate "-" [show run, show n, show l, show s, show mt]) (stats xs)
+      reportMain ExampleSum repOptions (intercalate "-" [show run, show n, show l, show s, show mt]) (void . stats xs)
     RunQuantiles qs -> do
       xs <- rvs gen l
-      reportMainWith repOptions (intercalate "-" [show run, show n, show l, show s, show mt]) (perfQuantiles xs qs)
+      reportMain ExampleSum repOptions (intercalate "-" [show run, show n, show l, show s, show mt]) (void . perfQuantiles xs qs)
 
 reportRaw :: ReportOptions -> PerfT IO [[Double]] a -> IO (a, Map Text [[Double]])
 reportRaw o t = do
@@ -82,17 +69,17 @@ reportRaw o t = do
   let mt = reportMeasureType o
   runPerfT (measureDs mt c n) t
 
-stats :: (Semigroup t) => [Double] -> PerfT IO t [[Double]]
-stats xs = do
-  r1 <- ffap "stats" (scan ((,) <$> ma 0.99 <*> std 0.99)) xs
+stats :: (Semigroup t) => [Double] -> Int -> PerfT IO t [[Double]]
+stats xs l = do
+  r1 <- ffap "stats" (scan ((,) <$> ma 0.99 <*> std 0.99)) (take l xs)
   r2 <- ffap "ma" (scan (ma 0.99)) xs
   r3 <- ffap "std" (scan (std 0.99)) xs
   pure [fst <$> r1,snd <$> r1, r2,r3]
 
-perfQuantiles :: (Semigroup t) => [Double] -> [Double] -> PerfT IO t [Int]
-perfQuantiles qs xs = do
-  r1 <- ffap "digitize" (scan (digitize 0.99 qs)) xs
-  r2 <- ffap "digitize'" (scan (digitize' 0.99 qs)) xs
+perfQuantiles :: (Semigroup t) => [Double] -> [Double] -> Int -> PerfT IO t [Int]
+perfQuantiles qs xs l = do
+  r1 <- ffap "digitize" (scan (digitize 0.99 qs)) (take l xs)
+  r2 <- ffap "digitize'" (scan (digitize' 0.99 qs)) (take l xs)
   pure (r1 <> r2)
 
 digitize' :: Double -> [Double] -> Mealy Double Int
