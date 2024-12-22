@@ -117,7 +117,6 @@ digitize r qs = M inject step extract
             )
               <$> xs
 
-
 -- | transform an input to a [0,1] signal, via digitalization.
 signalize :: Double -> [Double] -> Mealy Double Double
 signalize r qs' =

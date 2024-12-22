@@ -3,19 +3,19 @@
 -- | performance measurement
 module Main where
 
+import Control.Category (id)
+import Control.Monad
 import Data.List (intercalate)
-import Options.Applicative
-import Perf
-import Prelude hiding (id)
+import Data.Map.Strict (Map)
+import Data.Maybe
 import Data.Mealy
 import Data.Mealy.Quantiles
 import Data.Mealy.Simulate
-import Control.Category (id)
-import Data.Map.Strict (Map)
-import Data.Text (Text)
 import Data.TDigest hiding (median)
-import Data.Maybe
-import Control.Monad
+import Data.Text (Text)
+import Options.Applicative
+import Perf
+import Prelude hiding (id)
 
 data Run = RunStats | RunQuantiles [Double] deriving (Eq, Show)
 
@@ -27,9 +27,9 @@ data AppConfig = AppConfig
 
 parseRun :: Parser Run
 parseRun =
-  flag' RunStats (long "stats" <> help "run stats test") <|>
-  flag' (RunQuantiles [0.1,0.5,0.9]) (long "quantiles" <> help "run quantiles test") <|>
-  pure RunStats
+  flag' RunStats (long "stats" <> help "run stats test")
+    <|> flag' (RunQuantiles [0.1, 0.5, 0.9]) (long "quantiles" <> help "run quantiles test")
+    <|> pure RunStats
 
 parseAppConfig :: Parser AppConfig
 parseAppConfig =
@@ -74,7 +74,7 @@ stats xs l = do
   r1 <- ffap "stats" (scan ((,) <$> ma 0.99 <*> std 0.99)) (take l xs)
   r2 <- ffap "ma" (scan (ma 0.99)) xs
   r3 <- ffap "std" (scan (std 0.99)) xs
-  pure [fst <$> r1,snd <$> r1, r2,r3]
+  pure [fst <$> r1, snd <$> r1, r2, r3]
 
 perfQuantiles :: (Semigroup t) => [Double] -> [Double] -> Int -> PerfT IO t [Int]
 perfQuantiles qs xs l = do
