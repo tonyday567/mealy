@@ -64,7 +64,6 @@ import Data.Profunctor
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Text (Text)
-import Data.Typeable (Typeable)
 import GHC.TypeLits
 import Harpie.Fixed qualified as F
 import Harpie.NumHask qualified as N
@@ -100,7 +99,7 @@ import NumHask.Prelude hiding (asum, diff, fold, id, last, (.))
 -- >>> xsp <- rvsp g 10000 0.8
 
 newtype MealyError = MealyError {mealyErrorMessage :: Text}
-  deriving (Show, Typeable)
+  deriving (Show)
 
 instance Exception MealyError
 
