@@ -1,6 +1,6 @@
 #+TITLE: mealy
 
-[[https://hackage.haskell.org/package/mealy][file:https://img.shields.io/hackage/v/mealy.svg]] [[https://github.com/tonyday567/mealy/actions?query=workflow%3Ahaskell-ci][file:https://github.com/tonyday567/mealy/workflows/haskell-ci/badge.svg]]
+[[https://hackage.haskell.org/package/mealy][file:https://img.shields.io/hackage/v/mealy.svg]] [[https://github.com/tonyday567/mealy/actions/workflows/haskell-ci.yml][file:https://github.com/tonyday567/mealy/actions/workflows/haskell-ci.yml/badge.svg]]
 
 A 'Mealy' is a triple of functions
 
