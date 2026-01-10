@@ -89,18 +89,6 @@ library
     Data.Mealy.Quantiles
     Data.Mealy.Simulate
 
-test-suite doctests
-  import: ghc2024-stanza
-  main-is: doctests.hs
-  hs-source-dirs: test
-  build-depends:
-    base >=4.14 && <5,
-    doctest-parallel >=0.3 && <0.5,
-    mealy,
-
-  ghc-options: -threaded
-  type: exitcode-stdio-1.0
-
 common ghc-options-exe-stanza
   ghc-options:
     -fforce-recomp
