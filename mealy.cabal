@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: mealy
-version: 0.5.1.0
+version: 0.5.1.1
 license: BSD-3-Clause
 license-file: LICENSE
 copyright: Tony Day (c) 2013
@@ -53,8 +53,8 @@ library
     adjunctions >=4.0 && <4.5,
     base >=4.14 && <5,
     containers >=0.6 && <0.9,
-    harpie >=0.1 && <0.2,
-    harpie-numhask >=0.1 && <0.2,
+    harpie >=0.1 && <0.3,
+    harpie-numhask >=0.1 && <0.3,
     mwc-probability >=2.3.1 && <2.4,
     numhask >=0.11 && <0.14,
     primitive >=0.7.2 && <0.10,
@@ -69,27 +69,3 @@ library
     Data.Mealy.Quantiles
     Data.Mealy.Simulate
 
-common ghc-options-exe-stanza
-  ghc-options:
-    -fforce-recomp
-    -funbox-strict-fields
-    -rtsopts
-    -threaded
-    -with-rtsopts=-N
-
-executable mealy-perf
-  import: ghc-options-exe-stanza
-  import: ghc-options-stanza
-  default-language: GHC2024
-  main-is: mealy-perf.hs
-  hs-source-dirs: test
-  build-depends:
-    base >=4.7 && <5,
-    containers >=0.6 && <0.9,
-    mealy,
-    optparse-applicative >=0.17 && <0.20,
-    perf >=0.14 && <0.15,
-    tdigest >=0.2.1 && <0.4,
-    text >=1.2 && <2.2,
-
-  ghc-options: -O2

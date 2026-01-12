@@ -6,3 +6,4 @@
 /.hkgr/
 /.ghc.environment.*
 /checklist.org
+.ghc.environment.*
