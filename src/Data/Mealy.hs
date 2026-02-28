@@ -156,6 +156,13 @@ instance Profunctor Mealy where
 instance Strong Mealy where
   first' (M i s e) = M (first i) (\(cl, _) (al, ar) -> (s cl al, ar)) (first e)
 
+instance Costrong Mealy where
+  unfirst (M inject step extract) =
+    M
+      (\a -> let s0 = inject (a, c0); c0 = snd (extract s0) in s0)
+      (\s a -> let c = snd (extract s); s' = step s (a, c) in s')
+      (\s -> fst (extract s))
+
 -- The right type for Choice would be something like:
 --
 -- left' :: p a b -> p (Either a c) (These b c)
