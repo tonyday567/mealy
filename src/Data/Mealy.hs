@@ -161,7 +161,7 @@ instance Costrong Mealy where
     M
       (\a -> let s0 = inject (a, c0); c0 = snd (extract s0) in s0)
       (\s a -> let c = snd (extract s); s' = step s (a, c) in s')
-      (\s -> fst (extract s))
+      (fst . extract)
 
 -- The right type for Choice would be something like:
 --

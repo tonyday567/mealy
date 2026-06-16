@@ -35,7 +35,7 @@ import Prelude ()
 
 -- | A stateless swap mealy, useful for checking the yanking law.
 swapMealy :: Mealy (a, b) (b, a)
-swapMealy = M swap (\_ -> swap) (\x -> x)
+swapMealy = M swap (const swap) id
   where
     swap (x, y) = (y, x)
 
@@ -47,10 +47,10 @@ instance Trace Mealy (,) where
           let (s', _a) = fix (\ ~(s'', a') -> (step s (a', b), fst (extract s'')))
            in s'
       )
-      (\s -> snd (extract s))
+      (snd . extract)
 
   untrace (M inject step extract) =
     M
-      (\(a, b) -> (a, inject b))
+      (Data.Bifunctor.second inject)
       (\(_a0, s) (a, b) -> (a, step s b))
-      (\(a, s) -> (a, extract s))
+      (Data.Bifunctor.second extract)

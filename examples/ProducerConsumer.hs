@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
 
 -- | Producer / Consumer patterns as Mealy machines.
 --

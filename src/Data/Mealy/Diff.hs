@@ -149,7 +149,7 @@ gradScan m xs =
 --
 -- The value is treated as a constant: its pullback is always zero.
 constant :: (Additive p) => a -> Diff' tag p a
-constant x = Diff (\_ -> (x, const zero))
+constant x = Diff (const (x, const zero))
 
 -- | Fold a network mealy and return the final output together with a pullback
 -- through the parameters.
@@ -292,7 +292,7 @@ diffScan _ [] = ([], const [])
 diffScan m xs =
   let (_, states, stepPBs, injPB) = diffForward m xs
       ys = map (fst . runDiff (dExtract m)) states
-      pullback dys = diffBackward states stepPBs injPB (dExtract m) dys
+      pullback = diffBackward states stepPBs injPB (dExtract m)
    in (ys, pullback)
 
 -- | Fold a list through a 'DiffMealy' and return the final output together with
@@ -336,7 +336,7 @@ onlineDiffMealy f g = DiffMealy inject step extract
 
     extract = Diff $ \(A s c) ->
       let y = s / c
-          pb dy = A (dy / c) (-(s * dy) / (c * c))
+          pb dy = A (dy / c) (-((s * dy) / (c * c)))
        in (y, pb)
 
 -- | Differentiable moving average as a reverse-step 'DiffMealy'.
@@ -344,7 +344,7 @@ maDiffMealy ::
   (Subtractive b, Divisive b) =>
   b ->
   DiffMealy (Averager b b) b b
-maDiffMealy r = onlineDiffMealy id (Diff $ \s -> (r * s, \ds' -> r * ds'))
+maDiffMealy r = onlineDiffMealy id (Diff $ \s -> (r * s, (r *)))
 
 -- | Differentiable squared moving average as a reverse-step 'DiffMealy'.
 --
@@ -354,7 +354,7 @@ sqmaDiffMealy ::
   (Subtractive b, Divisive b) =>
   b ->
   DiffMealy (Averager b b) b b
-sqmaDiffMealy r = onlineDiffMealy square (Diff $ \s -> (r * s, \ds' -> r * ds'))
+sqmaDiffMealy r = onlineDiffMealy square (Diff $ \s -> (r * s, (r *)))
   where
     square = Diff $ \x -> (x * x, \ds' -> (one + one) * x * ds')
 
@@ -398,8 +398,8 @@ stdDiffMealy r = DiffMealy inject step extract
             | otherwise =
                 let twoY = (one + one) * y
                     dss = dy / (twoY * cc)
-                    dcc = -(ss * dy) / (twoY * cc * cc)
-                    ds = -(s * dy) / (y * c * c)
+                    dcc = -((ss * dy) / (twoY * cc * cc))
+                    ds = -((s * dy) / (y * c * c))
                     dc = (s * s * dy) / (y * c * c * c)
                  in StdState (A ds dc) (A dss dcc)
        in (y, pb)
@@ -428,11 +428,11 @@ instance (Subtractive a) => Subtractive (DelayState a) where
 delay1Diff :: (Additive a) => a -> DiffMealy (DelayState a) a a
 delay1Diff a0 = DiffMealy inject step extract
   where
-    inject = Diff $ \a -> (DelayState a0 a, \ds -> dsPrev ds)
-    step = Diff $ \((DelayState _ prev), a) ->
+    inject = Diff $ \a -> (DelayState a0 a, dsPrev)
+    step = Diff $ \(DelayState _ prev, a) ->
       let pb ds' = (DelayState zero (dsOut ds'), dsPrev ds')
        in (DelayState prev a, pb)
-    extract = Diff $ \ds -> (dsOut ds, \dOut -> DelayState dOut zero)
+    extract = Diff $ \ds -> (dsOut ds, (`DelayState` zero))
 
 -- | State for 'diffDiff'.
 data DiffState a b = DiffState
@@ -470,10 +470,10 @@ diffDiff a0 f = DiffMealy inject step extract
       let (b, pb) = runDiff f (a0, a)
           pb' ds' = snd (pb (diffOut ds')) + diffPrev ds'
        in (DiffState b a, pb')
-    step = Diff $ \((DiffState _ prev), a) ->
+    step = Diff $ \(DiffState _ prev, a) ->
       let (b', pb) = runDiff f (prev, a)
           pb' ds' =
             let (dPrev, dA) = pb (diffOut ds')
              in (DiffState zero dPrev, dA + diffPrev ds')
        in (DiffState b' a, pb')
-    extract = Diff $ \ds -> (diffOut ds, \dB -> DiffState dB zero)
+    extract = Diff $ \ds -> (diffOut ds, (`DiffState` zero))
