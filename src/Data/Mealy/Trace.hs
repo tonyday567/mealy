@@ -25,7 +25,7 @@ module Data.Mealy.Trace
 where
 
 import Circuit.Traced (Trace (..))
-import Data.Mealy (Mealy (..), pattern M, scan)
+import Data.Mealy (Mealy (..), scan, pattern M)
 import NumHask.Prelude hiding (id)
 import Prelude ()
 

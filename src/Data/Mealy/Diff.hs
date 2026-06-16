@@ -50,7 +50,7 @@ import Data.List (length)
 import Data.Mealy (Averager (..), Mealy, fold, ma, online, scan, sqma, std, pattern A)
 import Harpie.Array (Array)
 import Harpie.Array qualified as HA
-import NumHask.Diff (Diff, Diff', pattern Diff, runDiff, runDiff')
+import NumHask.Diff (Diff, Diff', runDiff, runDiff', pattern Diff)
 import NumHask.Prelude hiding (fold, length)
 import Prelude ()
 
@@ -106,7 +106,7 @@ variable n i = Diff $ \s ->
 variables :: (Additive a) => [a] -> [Diff (GradInputs a) a]
 variables xs =
   let n = length xs
-   in [ variable n i | i <- [0 .. n - 1] ]
+   in [variable n i | i <- [0 .. n - 1]]
 
 -- | Fold a list through a differentiable mealy and return the final output
 -- together with a pullback through the entire fold.
@@ -142,7 +142,7 @@ gradScan m xs =
       z = GradInputs (HA.konst [n] zero)
       pullback dbs =
         HA.arrayAs . unGradInputs $
-          foldl' (+) z [ pb db | (pb, db) <- zip (snd <$> pbs) dbs ]
+          foldl' (+) z [pb db | (pb, db) <- zip (snd <$> pbs) dbs]
    in (fst <$> pbs, pullback)
 
 -- | Lift a plain input value into the parameter space of a network mealy.
@@ -175,7 +175,7 @@ netScan m p xs =
   let ys = scan m (map constant xs)
       pbs = map (`runDiff'` p) ys
       pullback dbs =
-        foldl' (+) zero [ pb db | (pb, db) <- zip (snd <$> pbs) dbs ]
+        foldl' (+) zero [pb db | (pb, db) <- zip (snd <$> pbs) dbs]
    in (fst <$> pbs, pullback)
 
 -- | 'Data.Mealy.online' with a 'Diff'' carrier.
@@ -222,16 +222,16 @@ stdDiff = std
 -- single backward walk, so the cost of a scan gradient is linear in the input
 -- length (no closure-chain blow-up).
 data DiffMealy s a b = DiffMealy
-  { dInject :: Diff a s
-  , dStep :: Diff (s, a) s
-  , dExtract :: Diff s b
+  { dInject :: Diff a s,
+    dStep :: Diff (s, a) s,
+    dExtract :: Diff s b
   }
 
 -- | State for a differentiable standard deviation: a moving average together
 -- with a squared moving average.
 data StdState a = StdState
-  { stdMa :: !(Averager a a)
-  , stdSqMa :: !(Averager a a)
+  { stdMa :: !(Averager a a),
+    stdSqMa :: !(Averager a a)
   }
   deriving (Eq, Show)
 

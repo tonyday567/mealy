@@ -7,7 +7,6 @@
 -- A consumer folds a stream of inputs into a summary.
 --
 -- Both are Mealy machines; the symmetry is in the state.
-
 module ProducerConsumer where
 
 import Data.Mealy
@@ -47,7 +46,7 @@ consumer = Mealy inject step extract
 --
 -- >>> fold summer [1,2,3,4]
 -- 10
-summer :: Num a => Mealy a a
+summer :: (Num a) => Mealy a a
 summer = Mealy inject step extract
   where
     inject a = a
