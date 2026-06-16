@@ -1,5 +1,8 @@
 packages:
   mealy.cabal
+  ../numhask/numhask.cabal
+  ../numhask-free/numhask-free.cabal
+  ../circuits/circuits.cabal
 
 write-ghc-environment-files: always
 

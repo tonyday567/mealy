@@ -216,6 +216,14 @@ instance (Additive a, Additive b) => Monoid (Averager a b) where
   mempty = A zero zero
   mappend = (<>)
 
+instance (Additive a, Additive b) => Additive (Averager a b) where
+  zero = A zero zero
+  A s c + A s' c' = A (s + s') (c + c')
+
+instance (Subtractive a, Subtractive b) => Subtractive (Averager a b) where
+  negate (A s c) = A (negate s) (negate c)
+  A s c - A s' c' = A (s - s') (c - c')
+
 -- | extract the average from an 'Averager'
 --
 -- av gives NaN on zero divide
