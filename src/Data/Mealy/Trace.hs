@@ -25,9 +25,10 @@ module Data.Mealy.Trace
 where
 
 import Circuit.Traced (Trace (..))
+import Data.Bifunctor (second)
 import Data.Mealy (Mealy (..), scan, pattern M)
 import NumHask.Prelude hiding (id)
-import Prelude ()
+import Prelude (id)
 
 -- $setup
 -- >>> import Circuit.Traced (trace, untrace)
@@ -51,6 +52,6 @@ instance Trace Mealy (,) where
 
   untrace (M inject step extract) =
     M
-      (Data.Bifunctor.second inject)
+      (second inject)
       (\(_a0, s) (a, b) -> (a, step s b))
-      (Data.Bifunctor.second extract)
+      (second extract)
