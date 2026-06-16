@@ -1,8 +1,23 @@
 packages:
   mealy.cabal
-  ../numhask/numhask.cabal
-  ../numhask-free/numhask-free.cabal
-  ../circuits/circuits.cabal
+
+source-repository-package
+  type: git
+  location: https://github.com/tonyday567/numhask.git
+  branch: main
+
+source-repository-package
+  type: git
+  location: https://github.com/tonyday567/numhask-free.git
+  branch: main
+
+source-repository-package
+  type: git
+  location: https://github.com/tonyday567/circuits.git
+  branch: feat/circuits-0.2-cleanup
+
+constraints:
+  circuits >= 0.2
 
 write-ghc-environment-files: always
 
