@@ -59,9 +59,9 @@ The feedback type is `(s, [a], [b])` — current Mealy state, remaining input, a
 reify . encode = scan
 ```
 
-`reify` uses `Traced (->) Either` — the while-loop — which iterates through the list element by element. The Either trace in `(->)` drives the loop; the Mealy triple runs each step internally. The result is `[a] -> [b]`, exactly `scan`.
+`realise` uses `Traced (->) Either` — the while-loop — which iterates through the list element by element. The Either trace in `(->)` drives the loop; the Mealy triple runs each step internally. The result is `[a] -> [b]`, exactly `scan`.
 
-Proof sketch: `reify (Trace body) [a0, a1, ...]` enters at `Right [a0, a1, ...]`, the body produces `Left (s0, [a1, ...], [b0])`, the type-trace feeds that back as `Left (...)`, and so on until the list is exhausted, at which point `Right (reverse bs)` exits. This is `scanl'` by construction.
+Proof sketch: `realise (Trace body) [a0, a1, ...]` enters at `Right [a0, a1, ...]`, the body produces `Left (s0, [a1, ...], [b0])`, the type-trace feeds that back as `Left (...)`, and so on until the list is exhausted, at which point `Right (reverse bs)` exits. This is `scanl'` by construction.
 
 ## encodeElem → Hyper (pointwise)
 
@@ -137,7 +137,7 @@ consumer = Mealy inject step extract
 circuitPipeline :: Trace Either (->) [()] [[Int]]
 circuitPipeline = encode consumer >>> encode (producer [1,2,3])
 
--- reify circuitPipeline [(), (), ()] = [[1,2,3]]
+-- realise circuitPipeline [(), (), ()] = [[1,2,3]]
 -- This is scan (consumer . producer [1,2,3]) [(), (), ()]
 ```
 
@@ -160,8 +160,8 @@ This is why Mealy pairs naturally with `Either` as a Trace tensor but not with `
 
 ## open questions
 
-1. **The `encode` name.** `reify`, `encode`, `run`, `lower` are all interpreters — they close a delayed structure. A single class `Encode arr t code` where `encode :: Trace t arr a b -> code a b` would unify them. `encode @(->) @Either @Mealy` would be the identity. `encode @Mealy @Either @(Trace Either (->))` would be the list-shot encoding shown here. The triangle `reify . encode = scan` becomes `lower . encode . encode = scan` which is ugly — the class needs careful design.
+1. **The `encode` name.** `realise`, `encode`, `run`, `lower` are all interpreters — they close a delayed structure. A single class `Encode arr t code` where `encode :: Trace t arr a b -> code a b` would unify them. `encode @(->) @Either @Mealy` would be the identity. `encode @Mealy @Either @(Trace Either (->))` would be the list-shot encoding shown here. The triangle `realise . encode = scan` becomes `lower . encode . encode = scan` which is ugly — the class needs careful design.
 
 2. **Where does the Traced instance live?** Mealy is standalone and doesn't depend on circuits. `Traced Mealy Either` needs `Traced` from `Circuit.Traced`. This creates a dependency in one direction. Options: (a) provide the instance in circuits (but circuits doesn't depend on mealy), (b) provide it in a bridge package, (c) keep it as example-only code in this card. Currently it's (c) — the instance is shown here but doesn't live in either library.
 
-3. **Pointwise encoding.** The list-shot `encode` handles the list externally. A pointwise `encode` that gives `Trace Either (->) a b` (element-at-a-time, state hidden in the Trace) would be cleaner for circuit composition but requires the caller to drive input one element per `reify` call. Which pattern is more useful depends on whether you're composing with other circuits or just observing the Mealy.
+3. **Pointwise encoding.** The list-shot `encode` handles the list externally. A pointwise `encode` that gives `Trace Either (->) a b` (element-at-a-time, state hidden in the Trace) would be cleaner for circuit composition but requires the caller to drive input one element per `realise` call. Which pattern is more useful depends on whether you're composing with other circuits or just observing the Mealy.
