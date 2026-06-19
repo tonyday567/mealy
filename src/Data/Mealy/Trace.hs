@@ -2,10 +2,10 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-imports -Wno-pattern-namespace-specifier #-}
 
--- | A cartesian 'Trace' instance for 'Mealy'.
+-- | A cartesian 'Traced' instance for 'Mealy'.
 --
 -- This is the experiment from the discussion of Hasegawa-style shared
--- gradients: a 'Mealy' can be given a @Trace Mealy (,)@ instance by tying a
+-- gradients: a 'Mealy' can be given a @Traced Mealy (,)@ instance by tying a
 -- lazy knot at each step, analogous to the @MonadFix@ trace for @Kleisli m@.
 --
 -- The instance is lawful for morphisms that are productive / non-strict in the
@@ -19,12 +19,12 @@
 -- solution.  That is exactly why 'Data.Mealy.Diff.DiffMealy' uses a reverse
 -- step instead.
 module Data.Mealy.Trace
-  ( -- * Trace instance
+  ( -- * Traced instance
     swapMealy,
   )
 where
 
-import Circuit.Traced (Trace (..))
+import Circuit.Traced (Traced (..))
 import Data.Bifunctor (second)
 import Data.Mealy (Mealy (..), scan, pattern M)
 import NumHask.Prelude hiding (id)
@@ -40,7 +40,7 @@ swapMealy = M swap (const swap) id
   where
     swap (x, y) = (y, x)
 
-instance Trace Mealy (,) where
+instance Traced Mealy (,) where
   trace (M inject step extract) =
     M
       (\b -> let s0 = inject (a0, b); a0 = fst (extract s0) in s0)

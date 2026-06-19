@@ -70,8 +70,8 @@ lastM = Mealy inject step extract
 producerConsumerIdentity :: [Int] -> [Int]
 producerConsumerIdentity xs = fold (consumer . producer xs) (replicate (length xs) ())
 
--- | Circuit encoding: a Mealy producer is a single Knot in
--- Circuit (->) Either [()], and a consumer is a Knot in
--- Circuit (->) Either [a].
+-- | Trace encoding: a Mealy producer is a single Trace in
+-- Trace Either (->) [()], and a consumer is a Trace in
+-- Trace Either (->) [a].
 --
 -- See examples/mealy.md for the full isomorphism.

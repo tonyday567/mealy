@@ -1,22 +1,22 @@
-# circuits-mealy ⟜ Trace Mealy Either, encode, scan triangle
+# circuits-mealy ⟜ Traced Mealy Either, encode, scan triangle
 
-**ref** ⟜ ~/haskell/circuits/ — Circuit, Hyper, Trace
+**ref** ⟜ ~/haskell/circuits/ — Trace, Hyper, Traced
 **ref** ⟜ ~/mg/examples/mealy.md — the isomorphism card (context)
-**note** ⟜ Mealy is standalone. It does not depend on circuits. This card shows the bridge — what you get when you optionally encode a Mealy into Circuit or Hyper. Nothing in this card compiles as-is; it requires both `circuits` and `mealy` in scope. Use `cabal repl -b circuits` from the mealy project root.
+**note** ⟜ Mealy is standalone. It does not depend on circuits. This card shows the bridge — what you get when you optionally encode a Mealy into Trace or Hyper. Nothing in this card compiles as-is; it requires both `circuits` and `mealy` in scope. Use `cabal repl -b circuits` from the mealy project root.
 
-## Trace Mealy Either
+## Traced Mealy Either
 
 The Either trace is what gives Mealy its feedback semantics. Initialization (`Right a`) is unconditionally productive — it creates state immediately. Feedback (`Left x`) iterates through `step` until `extract` produces `Right b`. The `settle` helper drains feedback internally so that after `inject'` or `step'`, the state is guaranteed settled.
 
 ```haskell
-instance Trace Mealy Either where
+instance Traced Mealy Either where
   trace (Mealy inject step extract) = Mealy inject' step' extract'
     where
       inject' a = settle (inject (Right a))
       step' s a = settle (step s (Right a))
       extract' s = case extract s of
         Right b -> b
-        Left _  -> error "Trace Mealy Either: unsettled state"
+        Left _  -> error "Traced Mealy Either: unsettled state"
       settle s = case extract s of
         Left x  -> settle (step s (Left x))
         Right _ -> s
@@ -32,15 +32,15 @@ instance Trace Mealy Either where
       extract' (Right s)     = Right (k s)
 ```
 
-`untrace` lifts a plain Mealy into the Either tensor: `Right` values thread through the Mealy triple, `Left` values pass through untouched. This is exactly what `Trace` demands — the feedback channel is preserved while the payload is transformed.
+`untrace` lifts a plain Mealy into the Either tensor: `Right` values thread through the Mealy triple, `Left` values pass through untouched. This is exactly what `Traced` demands — the feedback channel is preserved while the payload is transformed.
 
-## encode → Circuit (list-shot)
+## encode → Trace (list-shot)
 
-Encode a Mealy as a single `Knot` that processes the entire list in one `reify`. State rides the feedback channel alongside the remaining input and accumulated output. Build-foldr fusion is preserved because the list structure passes through the Circuit boundary unchanged.
+Encode a Mealy as a single `Trace` that processes the entire list in one `reify`. State rides the feedback channel alongside the remaining input and accumulated output. Build-foldr fusion is preserved because the list structure passes through the Trace boundary unchanged.
 
 ```haskell
-encode :: Mealy a b -> Circuit (->) Either [a] [b]
-encode (Mealy inject step extract) = Knot body
+encode :: Mealy a b -> Trace Either (->) [a] [b]
+encode (Mealy inject step extract) = Trace body
   where
     body (Right [])           = Right []
     body (Right (a : as))     = let s = inject a
@@ -59,9 +59,9 @@ The feedback type is `(s, [a], [b])` — current Mealy state, remaining input, a
 reify . encode = scan
 ```
 
-`reify` uses `Trace (->) Either` — the while-loop — which iterates through the list element by element. The Either trace in `(->)` drives the loop; the Mealy triple runs each step internally. The result is `[a] -> [b]`, exactly `scan`.
+`reify` uses `Traced (->) Either` — the while-loop — which iterates through the list element by element. The Either trace in `(->)` drives the loop; the Mealy triple runs each step internally. The result is `[a] -> [b]`, exactly `scan`.
 
-Proof sketch: `reify (Knot body) [a0, a1, ...]` enters at `Right [a0, a1, ...]`, the body produces `Left (s0, [a1, ...], [b0])`, the type-trace feeds that back as `Left (...)`, and so on until the list is exhausted, at which point `Right (reverse bs)` exits. This is `scanl'` by construction.
+Proof sketch: `reify (Trace body) [a0, a1, ...]` enters at `Right [a0, a1, ...]`, the body produces `Left (s0, [a1, ...], [b0])`, the type-trace feeds that back as `Left (...)`, and so on until the list is exhausted, at which point `Right (reverse bs)` exits. This is `scanl'` by construction.
 
 ## encodeElem → Hyper (pointwise)
 
@@ -133,15 +133,15 @@ consumer = Mealy inject step extract
 -- producer [1,2,3] . consumer ≡ id :: Mealy () [Int]
 -- fold (consumer . producer [1,2,3]) (replicate 3 ()) = [1,2,3]
 
--- The same composition, encoded into Circuit
-circuitPipeline :: Circuit (->) Either [()] [[Int]]
+-- The same composition, encoded into Trace
+circuitPipeline :: Trace Either (->) [()] [[Int]]
 circuitPipeline = encode consumer >>> encode (producer [1,2,3])
 
 -- reify circuitPipeline [(), (), ()] = [[1,2,3]]
 -- This is scan (consumer . producer [1,2,3]) [(), (), ()]
 ```
 
-The list boundary carries through. The circuit is an optional structural layer — you get the same result whether you compose in Mealy directly or encode first then compose in Circuit.
+The list boundary carries through. The circuit is an optional structural layer — you get the same result whether you compose in Mealy directly or encode first then compose in Trace.
 
 ## why Either, why not (,)
 
@@ -156,12 +156,12 @@ If `inject` inspects `x` (which any realistic Mealy does — it needs to create 
 
 `Either` sidesteps this: `Right a` carries no feedback, so `inject (Right a)` is productive. Feedback only enters on subsequent `Left` iterations, after state exists. The phases don't overlap.
 
-This is why Mealy pairs naturally with `Either` as a Circuit tensor but not with `(,)`. The mealy.md card in mg/examples/ has the full derivation.
+This is why Mealy pairs naturally with `Either` as a Trace tensor but not with `(,)`. The mealy.md card in mg/examples/ has the full derivation.
 
 ## open questions
 
-1. **The `encode` name.** `reify`, `encode`, `run`, `lower` are all interpreters — they close a delayed structure. A single class `Encode arr t code` where `encode :: Circuit arr t a b -> code a b` would unify them. `encode @(->) @Either @Mealy` would be the identity. `encode @Mealy @Either @(Circuit (->) Either)` would be the list-shot encoding shown here. The triangle `reify . encode = scan` becomes `lower . encode . encode = scan` which is ugly — the class needs careful design.
+1. **The `encode` name.** `reify`, `encode`, `run`, `lower` are all interpreters — they close a delayed structure. A single class `Encode arr t code` where `encode :: Trace t arr a b -> code a b` would unify them. `encode @(->) @Either @Mealy` would be the identity. `encode @Mealy @Either @(Trace Either (->))` would be the list-shot encoding shown here. The triangle `reify . encode = scan` becomes `lower . encode . encode = scan` which is ugly — the class needs careful design.
 
-2. **Where does the Trace instance live?** Mealy is standalone and doesn't depend on circuits. `Trace Mealy Either` needs `Trace` from `Circuit.Traced`. This creates a dependency in one direction. Options: (a) provide the instance in circuits (but circuits doesn't depend on mealy), (b) provide it in a bridge package, (c) keep it as example-only code in this card. Currently it's (c) — the instance is shown here but doesn't live in either library.
+2. **Where does the Traced instance live?** Mealy is standalone and doesn't depend on circuits. `Traced Mealy Either` needs `Traced` from `Circuit.Traced`. This creates a dependency in one direction. Options: (a) provide the instance in circuits (but circuits doesn't depend on mealy), (b) provide it in a bridge package, (c) keep it as example-only code in this card. Currently it's (c) — the instance is shown here but doesn't live in either library.
 
-3. **Pointwise encoding.** The list-shot `encode` handles the list externally. A pointwise `encode` that gives `Circuit (->) Either a b` (element-at-a-time, state hidden in the Knot) would be cleaner for circuit composition but requires the caller to drive input one element per `reify` call. Which pattern is more useful depends on whether you're composing with other circuits or just observing the Mealy.
+3. **Pointwise encoding.** The list-shot `encode` handles the list externally. A pointwise `encode` that gives `Trace Either (->) a b` (element-at-a-time, state hidden in the Trace) would be cleaner for circuit composition but requires the caller to drive input one element per `reify` call. Which pattern is more useful depends on whether you're composing with other circuits or just observing the Mealy.
